@@ -479,7 +479,9 @@ function QuizManager({ titre, contexteLabel = "Module", loadUrl, generateUrl, sa
       const r = await api.post(generateUrl, { nb_questions: nbQuestions }, { headers: getHeaders() });
       setQuestions(r.data.questions); setEtape("preview");
     } catch (err) {
-      setErreur(err.response?.data?.message || "Erreur de génération.");
+      const message = err.response?.data?.message || "Erreur de génération.";
+      const detail = err.response?.data?.detail;
+      setErreur(detail ? `${message} (${detail})` : message);
     } finally { setLoading(false); }
   };
 
@@ -1105,6 +1107,7 @@ function SectionFormations() {
   const [leconDrawerOpen, setLeconDrawerOpen] = useState(false);
   const [drawerV, setDrawerV]         = useState(false);
   const [drawerEditM, setDrawerEditM] = useState(false);
+  const [drawerEditC, setDrawerEditC] = useState(false);
   const [drawerEditL, setDrawerEditL] = useState(false);
   const [drawerQuizFinal, setDrawerQuizFinal] = useState(false);
 
@@ -1112,6 +1115,7 @@ function SectionFormations() {
   const [selectedCoursForLecon, setSelectedCoursForLecon]   = useState(null);
   const [selectedLecon, setSelectedLecon]   = useState(null);
   const [editingModule, setEditingModule]   = useState(null);
+  const [editingCours, setEditingCours]     = useState(null);
   const [editingLecon, setEditingLecon]     = useState(null);
   const [confirmDel, setConfirmDel] = useState({ open: false, message: "", onConfirm: null });
   const [erreurVideo, setErreurVideo] = useState(null);
@@ -1120,6 +1124,7 @@ function SectionFormations() {
   const { data: parcoursOptions = [] } = useParcoursList();
   const [mForm, setMForm] = useState({ titre: "", description: "", couleur: "#C45C7A", icone: "📚" });
   const [cForm, setCForm] = useState({ titre: "", description: "" });
+  const [editCForm, setEditCForm] = useState({ titre: "", description: "" });
   const [vForm, setVForm] = useState({ titre: "", url: "" });
   const [editMForm, setEditMForm] = useState({ titre: "", description: "", couleur: "#C45C7A", icone: "📚" });
   const [editLForm, setEditLForm] = useState({ titre: "", description: "", dureeMinutes: "", contenuTexte: "" });
@@ -1175,6 +1180,12 @@ function SectionFormations() {
     api.post(`/cours`, { moduleId: selectedModuleForCours, ...cForm }, { headers: getHeaders() })
       .then(() => { loadDetail(detail); setDrawerC(false); setCForm({ titre: "", description: "" }); })
       .catch((err) => alert(err.response?.data?.message || "Erreur"));
+  };
+  const modifierCours = () => {
+    if (!editingCours) return;
+    api.put(`/cours/${editingCours.id}`, editCForm, { headers: getHeaders() })
+      .then(() => { loadDetail(detail); setDrawerEditC(false); setEditingCours(null); })
+      .catch((err) => alert(err.response?.data?.message || "Erreur lors de la modification du cours"));
   };
   const ajouterVideo = () => {
     setErreurVideo(null);
@@ -1312,6 +1323,8 @@ function SectionFormations() {
                         {(cours.lecons || []).length} leçon{(cours.lecons || []).length !== 1 ? "s" : ""}
                       </span>
                       <BtnNeutral onClick={() => { setSelectedCoursForLecon(cours.id); setLeconDrawerOpen(true); }} icon={Icon.plus}>Leçon</BtnNeutral>
+                      <IconBtn onClick={() => { setEditingCours(cours); setEditCForm({ titre: cours.titre || "", description: cours.description || "" }); setDrawerEditC(true); }}
+                        icon={Icon.edit} title="Modifier le cours" />
                       <IconBtn onClick={() => supprimerCours(cours)} icon={Icon.trash} danger title="Supprimer le cours" />
                     </div>
                     {(cours.lecons || []).map((l) => (
@@ -1387,6 +1400,11 @@ function SectionFormations() {
           <Input label="Titre du cours" value={cForm.titre} required onChange={(e) => setCForm({ ...cForm, titre: e.target.value })} />
           <Textarea label="Description" value={cForm.description} rows={3} onChange={(e) => setCForm({ ...cForm, description: e.target.value })} />
           <BtnPrimary onClick={creerCours} disabled={!cForm.titre} icon={Icon.plus}>Créer le cours</BtnPrimary>
+        </Drawer>
+        <Drawer open={drawerEditC} onClose={() => { setDrawerEditC(false); setEditingCours(null); }} title="Modifier le cours">
+          <Input label="Titre du cours" value={editCForm.titre} required onChange={(e) => setEditCForm({ ...editCForm, titre: e.target.value })} />
+          <Textarea label="Description" value={editCForm.description} rows={3} onChange={(e) => setEditCForm({ ...editCForm, description: e.target.value })} />
+          <BtnPrimary onClick={modifierCours} disabled={!editCForm.titre.trim()} icon={Icon.save}>Enregistrer les modifications</BtnPrimary>
         </Drawer>
         <LeconFormDrawer open={leconDrawerOpen} onClose={() => setLeconDrawerOpen(false)}
           coursId={selectedCoursForLecon} onSuccess={() => { if (detail) loadDetail(detail); }} />
