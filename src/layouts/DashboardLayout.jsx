@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../store/authStore";
 import AbonnementBanner from "../components/AbonnementBanner";
 import MessagerieWidget from "../components/MessagerieWidget";
@@ -21,6 +21,8 @@ export default function DashboardLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+
+  if (user?.role === "admin") return <Navigate to="/admin" replace />;
 
   const initials = user?.nom
     ? user.nom.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)

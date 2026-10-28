@@ -70,7 +70,9 @@ export default function LoginPage() {
     try {
       const res = await api.post("/login", { email, mot_de_passe: password });
       login(res.data.user, res.data.token);
-      navigate(onboarding ? "/dashboard/formations?onboarding=1" : "/dashboard");
+      navigate(res.data.user.role === "admin"
+        ? "/admin"
+        : onboarding ? "/dashboard/formations?onboarding=1" : "/dashboard");
     } catch (err) {
       setMsg(err.response?.data?.message || "Impossible de joindre le serveur.");
       setLoading(false);
