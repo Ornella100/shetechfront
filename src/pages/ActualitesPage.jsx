@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faArrowRight, faMagnifyingGlass, faNewspaper, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import api from '../lib/api';
@@ -7,6 +8,7 @@ const ACCENT = '#C45C7A';
 const BG = '#F9F0F3';
 
 export default function ActualitesPage() {
+  const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
@@ -35,6 +37,10 @@ export default function ActualitesPage() {
   };
 
   const date = (value) => value ? new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const goBack = () => {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate('/');
+  };
 
   return <main style={{ minHeight: '100vh', background: BG, color: '#2B1B24', padding: '36px 22px 64px' }}>
     <div style={{ maxWidth: 1050, margin: '0 auto' }}>
@@ -49,6 +55,9 @@ export default function ActualitesPage() {
           </div>
         </article>
       </> : <>
+        <button type="button" onClick={goBack} style={backButton} aria-label="Revenir à la page précédente">
+          <FontAwesomeIcon icon={faArrowLeft} /> Retour
+        </button>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 18, flexWrap: 'wrap', marginBottom: 28 }}>
           <div><div style={eyebrow}><FontAwesomeIcon icon={faNewspaper} /> Le journal SheTech</div>
             <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(34px, 5vw, 52px)', margin: '12px 0 8px' }}>Actualités</h1>
@@ -86,6 +95,6 @@ const cardImage = { width: '100%', height: 190, objectFit: 'cover', display: 'bl
 const searchInput = { flex: 1, minWidth: 0, padding: '11px 13px', border: '1px solid #eadde3', borderRadius: 9, font: 'inherit' };
 const searchButton = { width: 44, border: 0, borderRadius: 9, color: '#fff', background: ACCENT, cursor: 'pointer' };
 const refreshButton = { width: 42, border: '1px solid #eadde3', borderRadius: 9, color: ACCENT, background: '#fff', cursor: 'pointer' };
-const backButton = { border: 0, background: 'transparent', color: ACCENT, fontWeight: 750, cursor: 'pointer', padding: '8px 0', display: 'inline-flex', gap: 9, alignItems: 'center' };
+const backButton = { border: 0, background: 'transparent', color: ACCENT, fontWeight: 750, cursor: 'pointer', padding: '8px 0', marginBottom: 10, display: 'inline-flex', gap: 9, alignItems: 'center' };
 const readButton = { border: 0, padding: 0, background: 'transparent', color: ACCENT, font: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'inline-flex', gap: 9, alignItems: 'center' };
 const emptyState = { background: '#fff', borderRadius: 16, padding: 50, textAlign: 'center', color: '#76656d' };

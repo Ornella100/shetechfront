@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "./assets/home-hero.png";
+import api from "./lib/api";
 
 const navLinks = [
   { label: "Formations", anchor: "formations" },
@@ -7,12 +9,6 @@ const navLinks = [
   { label: "Communauté", anchor: "communaute" },
   { label: "Certificats", anchor: "certificats" },
   { label: "Actualités", path: "/actualites" },
-];
-
-const stats = [
-  ["50+", "formations"],
-  ["500+", "apprenantes"],
-  ["120+", "projets lancés"],
 ];
 
 const parcours = [
@@ -30,17 +26,25 @@ const parcours = [
   },
 ];
 
-const domaines = [
-  "Développement Web",
-  "Marketing Digital",
-  "E-commerce",
-  "Design UI/UX",
-  "Cybersécurité",
-  "Leadership",
-];
-
 export default function HomePage() {
   const navigate = useNavigate();
+  const [catalogue, setCatalogue] = useState([]);
+  const totalFormations = catalogue.reduce((total, item) => total + (Number(item.nb_formations) || 0), 0);
+
+  useEffect(() => {
+    let actif = true;
+    api.get("/parcours")
+      .then(({ data }) => { if (actif) setCatalogue(Array.isArray(data) ? data : []); })
+      .catch(() => { if (actif) setCatalogue([]); });
+    return () => { actif = false; };
+  }, []);
+
+  const stats = [
+    [totalFormations || "—", "formations"],
+    ["500+", "apprenantes"],
+    ["120+", "projets lancés"],
+  ];
+
   const onLogin = () => navigate("/login");
   const onRegister = () => navigate("/register");
   return (
@@ -124,9 +128,11 @@ export default function HomePage() {
           <h2>Des parcours adaptés aux métiers qui recrutent.</h2>
         </div>
         <div className="home-domain-list">
-          {domaines.map((domaine) => (
-            <span key={domaine}>{domaine}</span>
-          ))}
+          {catalogue.length ? catalogue.map((item) => (
+            <span key={item.id}>{item.titre}</span>
+          )) : (
+            <span>Les parcours seront affichés ici dès qu’ils seront disponibles.</span>
+          )}
         </div>
       </section>
 

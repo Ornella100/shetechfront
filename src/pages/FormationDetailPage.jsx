@@ -150,6 +150,7 @@ export default function FormationDetailPage() {
         </div>
 
         {/* Quiz final (85 %) & certificat de la formation */}
+        {!formation.inscriptionRequise && !formation.accesRestreint && (
         <div style={{ display: 'grid', gap: '8px', marginBottom: '20px' }}>
           <button
             onClick={() => navigate(`/dashboard/formations/${formationId}/quiz-final`)}
@@ -172,6 +173,7 @@ export default function FormationDetailPage() {
             Mon certificat
           </button>
         </div>
+        )}
 
         {/* Modules */}
         {formation.modules?.map((module) => {
@@ -260,7 +262,16 @@ export default function FormationDetailPage() {
 
       {/* ===== Contenu de la leçon (affichage adaptatif selon les ressources) ===== */}
       <main className="fd-content">
-        {!lecon ? (
+        {formation.inscriptionRequise ? (
+          <div style={{ padding: '80px 20px', textAlign: 'center', color: '#6b7280' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+            <h2 style={{ color: '#1a0f14' }}>Inscrivez-vous au parcours pour commencer</h2>
+            <p>Cette formation fait partie d’un parcours. Inscrivez-vous à celui-ci depuis le catalogue.</p>
+            <button onClick={() => navigate('/dashboard/formations')} style={{ background: ACCENT, color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 18px', fontWeight: 700, cursor: 'pointer' }}>
+              Voir les parcours
+            </button>
+          </div>
+        ) : !lecon ? (
           <div style={{ padding: '80px 20px', textAlign: 'center', color: '#9ca3af' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>👈</div>
             <p>Sélectionnez une leçon dans le menu pour commencer.</p>

@@ -15,17 +15,21 @@ export default function FormationsPage() {
   const [selectedParcoursId, setSelectedParcoursId] = useState(null);
   const [searchParams] = useSearchParams();
   const onboarding = searchParams.get('onboarding') === '1';
-  const { data: parcours, isLoading } = useParcoursList();
-  const { data: inscriptions } = useMesInscriptions();
+  const { data: parcours, isLoading, isError: parcoursError } = useParcoursList();
+  const { data: inscriptions, isLoading: inscriptionsLoading, isError: inscriptionsError } = useMesInscriptions();
   const { mutate: inscrire, isPending: inscriptionEnCours, error: erreurInscription, reset: resetInscription } = useInscriptionParcours();
   const { mutate: desinscrire } = useDesinscriptionParcours();
 
   const inscrits = new Set(
-    (inscriptions?.inscriptions || []).filter(i => i.statut !== 'abandonne').map(i => i.parcours_id)
+    (inscriptions?.inscriptions || []).filter(i => ['actif', 'termine'].includes(i.statut)).map(i => i.parcours_id)
+  );
+  const termines = new Set(
+    (inscriptions?.inscriptions || []).filter(i => i.statut === 'termine').map(i => i.parcours_id)
   );
   const actifs = inscriptions?.actifs ?? 0;
   const max = inscriptions?.max ?? 3;
   const limiteAtteinte = actifs >= max;
+  const inscriptionEtatInconnu = inscriptionsLoading || inscriptionsError;
 
   if (isLoading) {
     return (
@@ -85,6 +89,21 @@ export default function FormationsPage() {
           </div>
         )}
 
+        {inscriptionsError && (
+          <div style={{ background: '#fff', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', color: '#991b1b', fontSize: '13px' }}>
+            Impossible de vérifier vos inscriptions. Réessayez avant de suivre un nouveau parcours.
+          </div>
+        )}
+
+        {parcoursError ? (
+          <div style={{ background: '#fff', border: '1px solid #fecaca', borderRadius: '12px', padding: '24px', color: '#991b1b' }}>
+            Le catalogue n’a pas pu être chargé. Réessayez dans quelques instants.
+          </div>
+        ) : parcours?.length === 0 ? (
+          <div style={{ background: '#fff', border: '1px solid #f0dce4', borderRadius: '12px', padding: '24px', color: '#6b7280' }}>
+            Le catalogue des formations est en cours de préparation. Revenez bientôt pour choisir votre parcours.
+          </div>
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
           {parcours?.map(p => (
             <div
@@ -118,11 +137,19 @@ export default function FormationsPage() {
                 {p.description}
               </p>
               <div style={{ fontSize: '12px', color: ACCENT, fontWeight: 600, marginTop: '12px' }}>
-                {p.formations?.length || 0} formation{p.formations?.length !== 1 ? 's' : ''} →
+                {p.nb_formations ?? p.formations?.length ?? 0} formation{(p.nb_formations ?? p.formations?.length ?? 0) !== 1 ? 's' : ''} →
               </div>
 
               {/* Suivre / Suivi (max 3 parcours actifs) */}
-              {inscrits.has(p.id) ? (
+              {termines.has(p.id) ? (
+                <div
+                  aria-label="Parcours terminé"
+                  style={{ marginTop: '14px', width: '100%', boxSizing: 'border-box', textAlign: 'center', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '9px', fontSize: '12.5px', fontWeight: 800 }}
+                >
+                  <FontAwesomeIcon icon={faCircleCheck} style={{ marginRight: '8px' }} />
+                  Parcours terminé
+                </div>
+              ) : inscrits.has(p.id) ? (
                 <button
                   onClick={e => {
                     e.stopPropagation();
@@ -140,30 +167,36 @@ export default function FormationsPage() {
                 </button>
               ) : (
                 <button
-                  onClick={e => { e.stopPropagation(); inscrire(p.id); }}
-                  disabled={limiteAtteinte || inscriptionEnCours}
+                  onClick={e => { e.stopPropagation(); setSelectedParcoursId(p.id); }}
                   style={{
                     marginTop: '14px', width: '100%',
-                    background: limiteAtteinte ? '#f3f4f6' : ACCENT,
-                    color: limiteAtteinte ? '#9ca3af' : '#fff',
+                    background: ACCENT,
+                    color: '#fff',
                     border: 'none', borderRadius: '8px', padding: '9px',
                     fontSize: '12.5px', fontWeight: 800,
-                    cursor: limiteAtteinte ? 'not-allowed' : 'pointer',
+                    cursor: 'pointer',
                   }}
-                  title={limiteAtteinte ? `Maximum ${max} parcours — désinscrivez-vous d'un parcours pour en suivre un autre` : ''}
                 >
                   <FontAwesomeIcon icon={faPlus} style={{ marginRight: '8px' }} />
-                  {limiteAtteinte ? `Limite de ${max} atteinte` : 'Suivre ce parcours'}
+                  Voir les formations
                 </button>
               )}
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {selectedParcoursId && (
         <ParcoursModal
           parcoursId={selectedParcoursId}
+          isInscrit={inscrits.has(selectedParcoursId)}
+          limiteAtteinte={limiteAtteinte}
+          inscriptionEtatInconnu={inscriptionEtatInconnu}
+          inscriptionsError={inscriptionsError}
+          max={max}
+          inscriptionEnCours={inscriptionEnCours}
+          onInscrire={() => inscrire(selectedParcoursId)}
           onClose={() => setSelectedParcoursId(null)}
         />
       )}
@@ -171,9 +204,12 @@ export default function FormationsPage() {
   );
 }
 
-function ParcoursModal({ parcoursId, onClose }) {
+function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatInconnu, inscriptionsError, max, inscriptionEnCours, onInscrire, onClose }) {
   const navigate = useNavigate();
   const { data: parcours, isLoading, isError } = useParcoursDetail(parcoursId);
+  const contientLecons = parcours?.formations?.some(formation =>
+    formation.modules?.some(module => module.cours?.some(cours => cours.lecons?.length > 0))
+  ) || false;
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -254,6 +290,25 @@ function ParcoursModal({ parcoursId, onClose }) {
                 </p>
               )}
 
+              {!isInscrit && parcours?.formations?.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#fdf7f9', border: '1px solid #f0dce4', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px' }}>
+                  <span style={{ color: inscriptionsError ? '#991b1b' : '#6b7280', fontSize: '13px' }}>
+                    {inscriptionsError
+                      ? 'Impossible de vérifier vos inscriptions. Réessayez dans quelques instants.'
+                      : contientLecons
+                        ? 'Inscrivez-vous à ce parcours pour démarrer une formation.'
+                        : 'Les formations de ce parcours attendent encore leurs premières leçons.'}
+                  </span>
+                  <button
+                    onClick={onInscrire}
+                    disabled={!contientLecons || limiteAtteinte || inscriptionEtatInconnu || inscriptionEnCours}
+                    style={{ background: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu ? ACCENT : '#f3f4f6', color: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu ? '#fff' : '#9ca3af', border: 'none', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontWeight: 800, cursor: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu && !inscriptionEnCours ? 'pointer' : 'not-allowed' }}
+                  >
+                    {inscriptionEnCours ? 'Inscription...' : inscriptionEtatInconnu ? 'Vérification...' : limiteAtteinte ? `Limite de ${max} parcours atteinte` : contientLecons ? 'Suivre ce parcours' : 'En préparation'}
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gap: '14px' }}>
                 {parcours?.formations?.map(formation => {
                   const nbModules = formation.modules?.length || 0;
@@ -266,7 +321,7 @@ function ParcoursModal({ parcoursId, onClose }) {
                   return (
                     <div
                       key={formation.id}
-                      onClick={open}
+                      onClick={() => { if (isInscrit && nbLecons > 0) open(); }}
                       style={{
                         border: '1px solid #e5e7eb',
                         borderRadius: '10px',
@@ -275,7 +330,7 @@ function ParcoursModal({ parcoursId, onClose }) {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         gap: '16px',
-                        cursor: 'pointer',
+                        cursor: isInscrit && nbLecons > 0 ? 'pointer' : 'default',
                         transition: 'all 0.2s ease',
                         background: '#fff',
                       }}
@@ -297,20 +352,21 @@ function ParcoursModal({ parcoursId, onClose }) {
                         </p>
                       </div>
                       <button
-                        onClick={e => { e.stopPropagation(); open(); }}
+                        onClick={e => { e.stopPropagation(); if (isInscrit && nbLecons > 0) open(); }}
+                        disabled={!isInscrit || nbLecons === 0}
                         style={{
                           flex: 'none',
-                          background: ACCENT,
-                          color: '#fff',
+                          background: isInscrit && nbLecons > 0 ? ACCENT : '#f3f4f6',
+                          color: isInscrit && nbLecons > 0 ? '#fff' : '#9ca3af',
                           border: 'none',
                           borderRadius: '8px',
                           padding: '10px 16px',
                           fontSize: '13px',
                           fontWeight: 700,
-                          cursor: 'pointer',
+                          cursor: isInscrit && nbLecons > 0 ? 'pointer' : 'not-allowed',
                         }}
                       >
-                        Commencer →
+                        {nbLecons === 0 ? 'Contenu à préparer' : isInscrit ? 'Commencer →' : 'Inscrivez-vous d’abord'}
                       </button>
                     </div>
                   );
@@ -318,6 +374,7 @@ function ParcoursModal({ parcoursId, onClose }) {
               </div>
 
               {/* Quiz final & Grand Certificat du parcours */}
+              {!!parcours?.formations?.length && isInscrit && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '22px' }}>
                 <button
                   onClick={() => navigate(`/dashboard/parcours/${parcoursId}/quiz-final`)}
@@ -340,6 +397,7 @@ function ParcoursModal({ parcoursId, onClose }) {
                   Grand Certificat
                 </button>
               </div>
+              )}
             </>
           )}
         </div>

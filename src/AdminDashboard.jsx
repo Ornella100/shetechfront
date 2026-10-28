@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "./lib/api";
 import { useParcoursList, useCreateParcours, useUpdateParcours, useDeleteParcours } from "./hooks/useParcours";
@@ -902,7 +903,7 @@ function SectionParcours() {
   const supprimer = (p) => {
     setConfirmDel({
       open: true,
-      message: `Supprimer le parcours « ${p.titre} » ? Les formations liées ne seront pas supprimées mais détachées.`,
+      message: `Supprimer le parcours « ${p.titre} » ? Il faut d’abord supprimer ou déplacer les formations qui lui sont rattachées.`,
       onConfirm: () => deleteParcours.mutateAsync(p.id)
         .then(() => setConfirmDel({ open: false }))
         .catch((err) => alert(err.response?.data?.message || "Erreur")),
@@ -1076,6 +1077,7 @@ function SectionAbonnements() {
 }
 
 function SectionFormations() {
+  const queryClient = useQueryClient();
   const [formations, setFormations] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [detail, setDetail]         = useState(null);
@@ -1138,7 +1140,12 @@ function SectionFormations() {
       ordre: fForm.ordre === "" ? 0 : Number(fForm.ordre),
     };
     api.post(`/formations`, payload, { headers: getHeaders() })
-      .then(() => { load(); setDrawerF(false); setFForm({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: "", ordre: "" }); })
+      .then(() => {
+        load();
+        queryClient.invalidateQueries({ queryKey: ["parcours"] });
+        setDrawerF(false);
+        setFForm({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: "", ordre: "" });
+      })
       .catch((err) => alert(err.response?.data?.message || "Erreur"));
   };
   const creerModule = () => {
@@ -1179,7 +1186,7 @@ function SectionFormations() {
   const supprimerFormation = (f) => {
     setConfirmDel({ open: true, message: `Supprimer "${f.titre}" ? Tous ses modules seront supprimés.`,
       onConfirm: () => api.delete(`/formations/${f.id}`, { headers: getHeaders() })
-        .then(() => { load(); setConfirmDel({ open: false }); })
+        .then(() => { load(); queryClient.invalidateQueries({ queryKey: ["parcours"] }); setConfirmDel({ open: false }); })
         .catch(() => setConfirmDel({ open: false })) });
   };
   const supprimerModule = (mod) => {
@@ -1446,11 +1453,11 @@ function SectionFormations() {
           options={DOMAINES_LIST.map((d) => ({ value: d.id, label: d.titre }))} />
         <Select label="Niveau" value={fForm.niveau} required onChange={(e) => setFForm({ ...fForm, niveau: e.target.value })}
           options={["Débutant", "Intermédiaire", "Avancé", "Expert"].map((n) => ({ value: n, label: n }))} />
-        <Select label="Parcours" value={fForm.parcours_id} onChange={(e) => setFForm({ ...fForm, parcours_id: e.target.value })}
-          options={[{ value: "", label: "— Aucun —" }, ...parcoursOptions.map((p) => ({ value: String(p.id), label: p.titre }))]} />
+        <Select label="Parcours obligatoire" value={fForm.parcours_id} onChange={(e) => setFForm({ ...fForm, parcours_id: e.target.value })}
+          options={[{ value: "", label: "Choisir un parcours" }, ...parcoursOptions.map((p) => ({ value: String(p.id), label: p.titre }))]} />
         <Input label="Ordre dans le parcours" type="number" value={fForm.ordre} placeholder="0"
           onChange={(e) => setFForm({ ...fForm, ordre: e.target.value })} />
-        <BtnPrimary onClick={creerFormation} disabled={!fForm.titre || !fForm.description} icon={Icon.plus}>Créer la formation</BtnPrimary>
+        <BtnPrimary onClick={creerFormation} disabled={!fForm.titre || !fForm.description || !fForm.parcours_id} icon={Icon.plus}>Créer la formation</BtnPrimary>
       </Drawer>
       <ConfirmModal open={confirmDel.open} message={confirmDel.message}
         onConfirm={confirmDel.onConfirm} onCancel={() => setConfirmDel({ open: false })} />

@@ -458,18 +458,31 @@ label.field-label {
 
 .home-links {
   display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 28px;
 }
 
-.home-links a {
+.home-links a,
+.home-links .home-link-btn {
   color: #6D2E46;
   font-size: 14px;
   font-weight: 650;
   text-decoration: none;
+  white-space: nowrap;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.home-links a:hover {
+.home-links .home-link-btn {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
+.home-links a:hover,
+.home-links .home-link-btn:hover {
   color: #C45C7A;
   transform: translateY(-1px);
 }
