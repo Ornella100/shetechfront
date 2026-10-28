@@ -119,11 +119,11 @@ function CertificatPage({ type, id }) {
             </p>
           </div>
         ) : elig?.eligible ? (
-          /* ===== Éligible : lancement de la génération (nom + avertissement) ===== */
+          /* Les certificats de parcours sont émis par l'administration. */
           <div style={{ background: '#fff', border: '1px solid #f0e4ea', borderRadius: '16px', padding: '30px', textAlign: 'center' }}>
             <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.7, margin: '0 0 22px' }}>
               {estParcours
-                ? 'Bravo ! Vous avez réussi le quiz final du parcours à 100 %. Votre Grand Certificat est prêt à être généré.'
+                ? 'Bravo ! Vous avez réussi le quiz final du parcours. Votre résultat est transmis à l’administration pour émission du Grand Certificat.'
                 : 'Bravo ! Vous avez réussi le quiz final de la formation. Votre certificat est prêt à être généré.'}
               {elig.quiz_final_score != null && (
                 <span style={{ display: 'block', marginTop: '6px', fontSize: '13px', color: '#6b7280' }}>
@@ -131,7 +131,7 @@ function CertificatPage({ type, id }) {
                 </span>
               )}
             </p>
-            <button
+            {!estParcours && <button
               onClick={() => setModalOuverte(true)}
               style={{
                 background: GOLD, color: '#fff', border: 'none', borderRadius: '10px',
@@ -141,9 +141,9 @@ function CertificatPage({ type, id }) {
             >
               <FontAwesomeIcon icon={faAward} style={{ marginRight: '10px' }} />
               Générer mon certificat
-            </button>
+            </button>}
             <p style={{ fontSize: '12px', color: '#9ca3af', margin: '16px 0 0' }}>
-              Le nom exact à imprimer vous sera demandé — la génération est unique.
+              {estParcours ? 'Le certificat apparaîtra ici et dans vos certificats une fois émis par l’administration.' : 'Le nom exact à imprimer vous sera demandé — la génération est unique.'}
             </p>
           </div>
         ) : (
@@ -189,7 +189,7 @@ function CertificatPage({ type, id }) {
         )}
       </div>
 
-      {modalOuverte && (
+      {modalOuverte && !estParcours && (
         <NomCertificatModal
           titre={titre}
           onClose={() => setModalOuverte(false)}

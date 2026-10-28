@@ -29,19 +29,19 @@ export default function DashboardHome() {
   const [progression, setProgression] = useState([]);
   const [projets, setProjets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [erreurProgression, setErreurProgression] = useState(false);
 
   const prenom = user?.nom?.split(" ")[0] || "Utilisatrice";
 
   const charger = () => {
     setLoading(true);
-    Promise.all([
-      api.get("/progression").catch(() => ({ data: [] })),
-      api.get("/projets").catch(() => ({ data: [] })),
-    ]).then(([prog, proj]) => {
-      setProgression(prog.data || []);
-      setProjets(proj.data || []);
-      setLoading(false);
-    });
+    Promise.allSettled([api.get("/progression"), api.get("/projets")])
+      .then(([prog, proj]) => {
+        setErreurProgression(prog.status === "rejected");
+        setProgression(prog.status === "fulfilled" ? prog.value.data || [] : []);
+        setProjets(proj.status === "fulfilled" ? proj.value.data || [] : []);
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { charger(); }, []);
@@ -69,8 +69,8 @@ export default function DashboardHome() {
       </section>
 
       <section className="dash-kpis">
-        <KpiCard value={`${avgProgression}%`} label="Progression moyenne" sub={`${progression.length} formation(s) active(s)`} tone="rose" />
-        <KpiCard value={progression.length} label="Formations" sub="Parcours en cours" tone="green" delay={70} />
+        <KpiCard value={erreurProgression ? "—" : `${avgProgression}%`} label="Progression moyenne" sub={erreurProgression ? "Données indisponibles" : `${progression.length} formation(s) active(s)`} tone="rose" />
+        <KpiCard value={erreurProgression ? "—" : progression.length} label="Formations" sub="Formations commencées" tone="green" delay={70} />
         <KpiCard value={projets.length} label="Projets créés" sub={`${projets.filter((p) => p.statut === "lancé").length} lancé(s)`} tone="gold" delay={140} />
         <KpiCard value="À venir" label="Certificats" sub="Terminez une formation pour générer un certificat" tone="plum" delay={210} />
       </section>
@@ -84,6 +84,11 @@ export default function DashboardHome() {
 
           {loading ? (
             <p className="dash-empty">Chargement...</p>
+          ) : erreurProgression ? (
+            <div className="dash-empty">
+              <p>Impossible de charger votre progression pour le moment.</p>
+              <button type="button" onClick={charger}>Réessayer</button>
+            </div>
           ) : progression.length === 0 ? (
             <div className="dash-empty">
               <p>Aucune formation en cours</p>

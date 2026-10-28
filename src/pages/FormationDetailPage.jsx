@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faListCheck, faAward } from '@fortawesome/free-solid-svg-icons';
@@ -9,6 +9,7 @@ import {
 } from '../hooks/useFormations';
 import { miniMdToHtml } from '../lib/miniMd';
 import AbonnementGate from '../components/AbonnementGate';
+import api from '../lib/api';
 
 const ACCENT = '#C45C7A';
 const GOLD = '#E8A554';
@@ -61,6 +62,7 @@ export default function FormationDetailPage() {
 
   const [openModules, setOpenModules] = useState({});
   const [selectedLeconId, setSelectedLeconId] = useState(null);
+  const [demarrageErreur, setDemarrageErreur] = useState('');
 
   // Liste plate ordonnée de toutes les leçons (pour navigation précédent/suivant)
   const flat = useMemo(() => {
@@ -82,6 +84,17 @@ export default function FormationDetailPage() {
   const current = idx >= 0 ? flat[idx] : null;
   const precedente = idx > 0 ? flat[idx - 1] : null;
   const suivante = idx >= 0 && idx < flat.length - 1 ? flat[idx + 1] : null;
+
+  useEffect(() => {
+    if (!formation || formation.inscriptionRequise || formation.accesRestreint || flat.length === 0) return undefined;
+    let actif = true;
+    api.post(`/formations/${formationId}/demarrer`)
+      .then(() => { if (actif) setDemarrageErreur(''); })
+      .catch((error) => {
+        if (actif) setDemarrageErreur(error.response?.data?.message || 'La progression n’a pas pu être enregistrée.');
+      });
+    return () => { actif = false; };
+  }, [formation?.id, formation?.inscriptionRequise, formation?.accesRestreint, formationId, flat.length]);
 
   const selectLecon = (entry) => {
     setSelectedLeconId(entry.lecon.id);
@@ -262,6 +275,11 @@ export default function FormationDetailPage() {
 
       {/* ===== Contenu de la leçon (affichage adaptatif selon les ressources) ===== */}
       <main className="fd-content">
+        {demarrageErreur && (
+          <p role="alert" style={{ margin: '16px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '13px' }}>
+            {demarrageErreur}
+          </p>
+        )}
         {formation.inscriptionRequise ? (
           <div style={{ padding: '80px 20px', textAlign: 'center', color: '#6b7280' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
@@ -274,7 +292,7 @@ export default function FormationDetailPage() {
         ) : !lecon ? (
           <div style={{ padding: '80px 20px', textAlign: 'center', color: '#9ca3af' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>👈</div>
-            <p>Sélectionnez une leçon dans le menu pour commencer.</p>
+            <p>{flat.length === 0 ? 'Les leçons de cette formation sont en cours de préparation.' : 'Sélectionnez une leçon dans le menu pour commencer.'}</p>
           </div>
         ) : formation.accesRestreint || lecon.verrouille ? (
           <AbonnementGate />
