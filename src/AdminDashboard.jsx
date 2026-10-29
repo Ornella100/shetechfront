@@ -846,7 +846,9 @@ function SectionUsers() {
 
   const changeRole = (id, role) => {
     api.put(`/admin/users/${id}/role`, { role }, { headers: getHeaders() })
-      .then(() => setUsers((prev) => prev.map((u) => u.id === id ? { ...u, role } : u)))
+      .then(() => setUsers((prev) => prev.map((u) => u.id === id
+        ? { ...u, role, niveau: role === "admin" ? null : u.niveau }
+        : u)))
       .catch(() => alert("Erreur lors du changement de rôle"));
   };
 
@@ -919,7 +921,7 @@ function SectionUsers() {
               ))}
             </select>
           )},
-          { key: "niveau",        label: "Niveau",      render: (v) => <span style={{ fontSize: 12, color: C.textMuted }}>{v || "—"}</span> },
+          { key: "niveau",        label: "Niveau",      render: (v, row) => <span style={{ fontSize: 12, color: C.textMuted }}>{row.role === "admin" ? "—" : v || "—"}</span> },
           { key: "date_creation", label: "Inscription", render: (v) => <span style={{ fontSize: 12, color: C.textMuted }}>{fmtDate(v)}</span> },
         ]}
         data={paginated} empty="Aucun utilisateur trouvé" />
