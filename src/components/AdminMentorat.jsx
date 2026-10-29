@@ -8,16 +8,18 @@ export default function AdminMentorat() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
+  const load = useCallback(async (silencieux = false) => {
+    if (!silencieux) setLoading(true);
+    setError('');
     try { const { data } = await api.get('/admin/sessions'); setSessions(data); }
     catch (e) { setError(e.response?.data?.message || 'Impossible de charger les sessions.'); }
-    finally { setLoading(false); }
+    finally { if (!silencieux) setLoading(false); }
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => { void load(); }, 0);
-    return () => clearTimeout(timer);
+    const refresh = setInterval(() => { void load(true); }, 15000);
+    return () => { clearTimeout(timer); clearInterval(refresh); };
   }, [load]);
 
   const update = async (session) => {
@@ -42,7 +44,7 @@ export default function AdminMentorat() {
 
   return <section style={{ maxWidth: 1000 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-      <p style={{ color: '#76656d', margin: 0 }}>Consultez les demandes et gérez le statut, le lien de réunion et les notes.</p>
+      <p style={{ color: '#76656d', margin: 0 }}>Les nouvelles demandes arrivent par courriel et apparaissent ici automatiquement. Confirmez ou refusez chaque demande.</p>
       <button type="button" onClick={load} style={button}>Actualiser</button>
     </div>
     {error && <p role="alert" style={{ color: '#b42318' }}>{error}</p>}
@@ -65,6 +67,10 @@ function SessionCard({ session, busy, onSave, onDelete }) {
   return <article style={{ background: '#fff', border: '1px solid #EDE3E7', borderRadius: 10, padding: 18 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
       <div><strong>{session.apprenant_nom || 'Apprenante'} avec {session.mentor_nom || 'Mentor'}</strong>
+        <div style={{ color: '#76656d', fontSize: 13, marginTop: 4 }}>
+          {session.user?.email && <a href={`mailto:${session.user.email}`} style={{ color: '#C45C7A' }}>{session.user.email}</a>}
+          {session.user?.telephone && <> · <a href={`tel:${session.user.telephone}`} style={{ color: '#C45C7A' }}>{session.user.telephone}</a></>}
+        </div>
         <div style={{ color: '#76656d', fontSize: 13, marginTop: 4 }}>{session.date_session ? new Date(session.date_session).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date à confirmer'} · {session.type || 'individuel'}</div></div>
       <button type="button" disabled={busy} onClick={() => onDelete(session)} style={{ ...button, color: '#b42318', borderColor: '#f4c7c3' }}>Supprimer</button>
     </div>
@@ -74,7 +80,13 @@ function SessionCard({ session, busy, onSave, onDelete }) {
       <label style={label}>Lien de réunion<input type="url" value={draft.lien_reunion} onChange={(e) => setDraft({ ...draft, lien_reunion: e.target.value })} style={field} /></label>
       <label style={label}>Notes<textarea rows="2" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} style={field} /></label>
     </div>
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><button type="button" disabled={busy} onClick={() => onSave(draft)} style={{ ...button, background: '#C45C7A', color: '#fff', borderColor: '#C45C7A' }}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+      {['en_attente', 'réservé'].includes(draft.statut) && <>
+        <button type="button" disabled={busy} onClick={() => onSave({ ...draft, statut: 'refusee' })} style={{ ...button, color: '#b42318', borderColor: '#f4c7c3' }}>Refuser la demande</button>
+        <button type="button" disabled={busy} onClick={() => onSave({ ...draft, statut: 'confirmee' })} style={{ ...button, background: '#C45C7A', color: '#fff', borderColor: '#C45C7A' }}>Confirmer la demande</button>
+      </>}
+      <button type="button" disabled={busy} onClick={() => onSave(draft)} style={{ ...button, background: '#C45C7A', color: '#fff', borderColor: '#C45C7A' }}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+    </div>
   </article>;
 }
 

@@ -5,7 +5,7 @@ import {
   faAward, faDownload, faLock, faListCheck, faCircleCheck, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import NomCertificatModal from '../components/NomCertificatModal';
-import { useEligibiliteCertificat, useGenererCertificat, telechargerCertificat } from '../hooks/useCertificats';
+import { useEligibiliteCertificat, useGenererCertificat, telechargerCertificat, telechargerModeleCertificatParcours } from '../hooks/useCertificats';
 
 const ACCENT = '#C45C7A';
 const BG = '#F9F0F3';
@@ -27,6 +27,8 @@ function CertificatPage({ type, id }) {
   const navigate = useNavigate();
   const estParcours = type === 'parcours';
   const [modalOuverte, setModalOuverte] = useState(false);
+  const [telechargementEnCours, setTelechargementEnCours] = useState(false);
+  const [erreurTelechargement, setErreurTelechargement] = useState('');
 
   const { data: elig, isLoading, refetch } = useEligibiliteCertificat(type, id);
   const { mutate: generer, isPending, error: erreurGeneration } = useGenererCertificat(type, id);
@@ -50,6 +52,15 @@ function CertificatPage({ type, id }) {
         }
       },
     });
+  };
+
+  const telechargerModele = async () => {
+    setTelechargementEnCours(true); setErreurTelechargement('');
+    try {
+      await telechargerModeleCertificatParcours(id, `certificat_${(titre || 'parcours').replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      setErreurTelechargement(err.response?.data?.message || 'Le téléchargement du certificat a échoué. Réessayez.');
+    } finally { setTelechargementEnCours(false); }
   };
 
   if (isLoading) {
@@ -123,7 +134,9 @@ function CertificatPage({ type, id }) {
           <div style={{ background: '#fff', border: '1px solid #f0e4ea', borderRadius: '16px', padding: '30px', textAlign: 'center' }}>
             <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.7, margin: '0 0 22px' }}>
               {estParcours
-                ? 'Bravo ! Vous avez réussi le quiz final du parcours. Votre résultat est transmis à l’administration pour émission du Grand Certificat.'
+                ? elig.certificat_template_disponible
+                  ? 'Bravo ! Vous avez réussi le quiz final du parcours. Votre certificat est disponible au téléchargement.'
+                  : 'Bravo ! Vous avez réussi le quiz final du parcours. L’administration doit encore déposer le certificat de ce parcours.'
                 : 'Bravo ! Vous avez réussi le quiz final de la formation. Votre certificat est prêt à être généré.'}
               {elig.quiz_final_score != null && (
                 <span style={{ display: 'block', marginTop: '6px', fontSize: '13px', color: '#6b7280' }}>
@@ -131,6 +144,13 @@ function CertificatPage({ type, id }) {
                 </span>
               )}
             </p>
+            {estParcours && elig.certificat_template_disponible && <button
+              type="button" onClick={telechargerModele} disabled={telechargementEnCours}
+              style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '10px', padding: '14px 30px', fontSize: '15px', fontWeight: 800, cursor: telechargementEnCours ? 'wait' : 'pointer', opacity: telechargementEnCours ? .7 : 1 }}>
+              <FontAwesomeIcon icon={faDownload} style={{ marginRight: '10px' }} />
+              {telechargementEnCours ? 'Téléchargement…' : 'Télécharger mon certificat'}
+            </button>}
+            {erreurTelechargement && <p role="alert" style={{ color: '#b42318', fontSize: 13, margin: '14px 0 0' }}>{erreurTelechargement}</p>}
             {!estParcours && <button
               onClick={() => setModalOuverte(true)}
               style={{

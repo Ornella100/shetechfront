@@ -4,6 +4,8 @@ import api from '../lib/api';
 export default function AdminCertificats() {
   const [eligible, setEligible] = useState([]);
   const [issued, setIssued] = useState([]);
+  const [parcours, setParcours] = useState([]);
+  const [files, setFiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -12,17 +14,30 @@ export default function AdminCertificats() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [e, i] = await Promise.all([
+      const [e, i, p] = await Promise.all([
         api.get('/admin/certificats/parcours/eligibles'),
         api.get('/admin/certificats'),
+        api.get('/admin/certificats/parcours'),
       ]);
-      setEligible(e.data); setIssued(i.data);
+      setEligible(e.data); setIssued(i.data); setParcours(p.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Impossible de charger les certificats.');
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const uploadTemplate = async (item) => {
+    const file = files[item.id];
+    if (!file) return;
+    const form = new FormData(); form.append('certificat', file);
+    setBusy(`template:${item.id}`); setError(''); setNotice('');
+    try {
+      const { data } = await api.post(`/admin/certificats/parcours/${item.id}/modele`, form);
+      setNotice(data.message); setFiles((current) => ({ ...current, [item.id]: null })); await load();
+    } catch (err) { setError(err.response?.data?.message || 'Le téléversement du certificat a échoué.'); }
+    finally { setBusy(''); }
+  };
 
   const issue = async (item) => {
     const key = `${item.user_id}:${item.parcours_id}`;
@@ -49,13 +64,25 @@ export default function AdminCertificats() {
 
   return <section style={{ maxWidth: 1050 }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-      <p style={{ margin: 0, color: '#76656d' }}>Émettez les certificats de parcours après réussite du quiz final et retrouvez ceux déjà envoyés.</p>
+      <p style={{ margin: 0, color: '#76656d' }}>Déposez un modèle PDF par parcours et gérez aussi les certificats individuels déjà émis.</p>
       <button type="button" onClick={load} style={button}>Actualiser</button>
     </header>
     {error && <p role="alert" style={{ color: '#b42318' }}>{error}</p>}
     {notice && <p role="status" style={{ color: '#16703b' }}>{notice}</p>}
     {loading ? <p>Chargement…</p> : <>
-      <h2 style={heading}>À émettre ({eligible.length})</h2>
+      <h2 style={heading}>Modèles de certificats par parcours</h2>
+      <p style={muted}>Déposez un PDF pour chaque parcours. Il sera proposé aux apprenantes qui réussissent le quiz final.</p>
+      {parcours.length ? <div style={{ ...grid, marginTop: 12 }}>{parcours.map((item) => <article key={item.id} style={{ ...card, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}><strong>{item.titre}</strong><div style={muted}>{item.certificat_disponible ? `Modèle disponible${item.nom_fichier ? ` : ${item.nom_fichier}` : ''}` : 'Aucun modèle téléversé'}</div></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <input type="file" accept="application/pdf,.pdf" onChange={(e) => setFiles((current) => ({ ...current, [item.id]: e.target.files?.[0] || null }))} />
+          <button type="button" disabled={!files[item.id] || busy === `template:${item.id}`} onClick={() => uploadTemplate(item)} style={primary}>
+            {busy === `template:${item.id}` ? 'Envoi…' : item.certificat_disponible ? 'Remplacer le PDF' : 'Téléverser le PDF'}
+          </button>
+        </div>
+      </article>)}</div> : <p style={muted}>Aucun parcours disponible.</p>}
+
+      <h2 style={{ ...heading, marginTop: 32 }}>Émissions individuelles en attente ({eligible.length})</h2>
       {eligible.length ? <div style={grid}>{eligible.map((item) => {
         const key = `${item.user_id}:${item.parcours_id}`;
         return <article key={key} style={card}>

@@ -42,3 +42,15 @@ export async function telechargerCertificat(certificatId, nomFichier = "certific
   a.remove();
   window.URL.revokeObjectURL(url);
 }
+
+export async function telechargerModeleCertificatParcours(parcoursId, nomFichier = "certificat_parcours.pdf") {
+  const response = await api.get(`/parcours/${parcoursId}/certificat/modele/telecharger`, { responseType: "blob" });
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nomFichier;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
