@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "./lib/api";
+import { getSocket } from "./lib/socket";
 import { useParcoursList, useCreateParcours, useUpdateParcours, useDeleteParcours } from "./hooks/useParcours";
 import { useAdminAbonnements } from "./hooks/useAbonnement";
 import RichTextEditor from "./components/RichTextEditor";
@@ -809,6 +810,7 @@ function SectionUsers() {
   const [loading, setLoading] = useState(true);
   const [recherche, setRecherche] = useState("");
   const [filtreRole, setFiltreRole] = useState("tous");
+  const [filtrePresence, setFiltrePresence] = useState("tous");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const PER_PAGE = 10;
@@ -823,6 +825,25 @@ function SectionUsers() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const appliquerSnapshot = (ids) => {
+      const online = new Set(ids.map(Number));
+      setUsers((prev) => prev.map((u) => ({ ...u, is_online: online.has(Number(u.id)) })));
+    };
+    const appliquerPresence = ({ userId, isOnline }) => {
+      setUsers((prev) => prev.map((u) => Number(u.id) === Number(userId) ? { ...u, is_online: isOnline } : u));
+    };
+    socket.on("presence:snapshot", appliquerSnapshot);
+    socket.on("presence:update", appliquerPresence);
+    socket.emit("presence:request");
+    return () => {
+      socket.off("presence:snapshot", appliquerSnapshot);
+      socket.off("presence:update", appliquerPresence);
+    };
+  }, []);
+
   const changeRole = (id, role) => {
     api.put(`/admin/users/${id}/role`, { role }, { headers: getHeaders() })
       .then(() => setUsers((prev) => prev.map((u) => u.id === id ? { ...u, role } : u)))
@@ -831,10 +852,12 @@ function SectionUsers() {
 
   const filtered = users.filter((u) => {
     const matchR = filtreRole === "tous" || u.role === filtreRole;
+    const matchP = filtrePresence === "tous" || (filtrePresence === "en_ligne" ? u.is_online : !u.is_online);
     const matchS = !recherche || u.nom?.toLowerCase().includes(recherche.toLowerCase()) || u.email?.toLowerCase().includes(recherche.toLowerCase());
-    return matchR && matchS;
+    return matchR && matchP && matchS;
   });
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const onlineCount = users.filter((u) => u.is_online).length;
 
   return (
     <div>
@@ -843,6 +866,10 @@ function SectionUsers() {
         <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500,
           background: C.border, padding: "3px 10px", borderRadius: 20 }}>
           {filtered.length}
+        </span>
+        <span style={{ fontSize: 11, color: "#21875A", fontWeight: 600,
+          background: "#EAF7F0", padding: "3px 10px", borderRadius: 20 }}>
+          ● {onlineCount} en ligne
         </span>
       </SectionTitle>
       {error && <p role="alert" style={{ color: "#b42318" }}>{error}</p>}
@@ -861,11 +888,26 @@ function SectionUsers() {
             {r === "tous" ? "Tous" : ROLE_CFG[r]?.label || r}
           </button>
         ))}
+        <select value={filtrePresence} onChange={(e) => { setFiltrePresence(e.target.value); setPage(1); }}
+          aria-label="Filtrer par présence"
+          style={{ ...inputStyle, width: "auto", minWidth: 150, padding: "7px 12px" }}>
+          <option value="tous">Tous les statuts</option>
+          <option value="en_ligne">En ligne</option>
+          <option value="hors_ligne">Hors ligne</option>
+        </select>
       </div>
       <Table loading={loading}
         cols={[
           { key: "nom",   label: "Nom",   render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
           { key: "email", label: "Email", render: (v) => <span style={{ color: C.textMuted, fontSize: 12 }}>{v}</span> },
+          { key: "is_online", label: "Présence", render: (online) => (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7,
+              color: online ? "#21875A" : C.textMuted, fontSize: 12, fontWeight: 600 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%",
+                background: online ? "#35A96F" : "#B9AEB4", boxShadow: online ? "0 0 0 3px #EAF7F0" : "none" }} />
+              {online ? "En ligne" : "Hors ligne"}
+            </span>
+          )},
           { key: "role",  label: "Rôle",  render: (v, row) => (
             <select value={v} onChange={(e) => changeRole(row.id, e.target.value)}
               style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${C.border}`,
