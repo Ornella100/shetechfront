@@ -899,6 +899,7 @@ function SectionParcours() {
   const [editId, setEditId] = useState(null);
   const [confirmDel, setConfirmDel] = useState({ open: false, message: "", onConfirm: null });
   const [quizParcours, setQuizParcours] = useState(null);
+  const [selectedParcours, setSelectedParcours] = useState(null);
 
   const ouvrirCreation = () => {
     setEditId(null);
@@ -928,6 +929,12 @@ function SectionParcours() {
     });
   };
 
+  if (selectedParcours) return <SectionFormations
+    parcoursId={selectedParcours.id}
+    parcoursTitle={selectedParcours.titre}
+    onBack={() => setSelectedParcours(null)}
+  />;
+
   return (
     <div>
       <SectionTitle>
@@ -937,7 +944,7 @@ function SectionParcours() {
       <Table loading={loading}
         cols={[
           { key: "titre", label: "Titre", render: (v, row) => (
-            <button onClick={() => ouvrirEdition(row)}
+            <button onClick={() => setSelectedParcours(row)}
               style={{ background: "none", border: "none", color: C.accent, fontSize: 13,
                 fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: "left" }}>
               {v}
@@ -955,6 +962,16 @@ function SectionParcours() {
           )},
           { key: "id", label: "", render: (v, row) => (
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button onClick={() => setSelectedParcours(row)}
+                style={{ background: "none", border: "none", color: C.accent, fontSize: 12,
+                  fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                Contenu
+              </button>
+              <button onClick={() => ouvrirEdition(row)}
+                style={{ background: "none", border: "none", color: C.textMuted, fontSize: 12,
+                  cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                Modifier
+              </button>
               <button onClick={() => setQuizParcours(row)}
                 style={{ background: "none", border: "none", color: C.accent, fontSize: 12,
                   fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
@@ -1094,7 +1111,7 @@ function SectionAbonnements() {
   );
 }
 
-function SectionFormations() {
+function SectionFormations({ parcoursId = null, parcoursTitle = null, onBack = null }) {
   const queryClient = useQueryClient();
   const [formations, setFormations] = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -1110,6 +1127,7 @@ function SectionFormations() {
   const [drawerEditC, setDrawerEditC] = useState(false);
   const [drawerEditL, setDrawerEditL] = useState(false);
   const [drawerQuizFinal, setDrawerQuizFinal] = useState(false);
+  const [editingFormationId, setEditingFormationId] = useState(null);
 
   const [selectedModuleForCours, setSelectedModuleForCours] = useState(null);
   const [selectedCoursForLecon, setSelectedCoursForLecon]   = useState(null);
@@ -1120,7 +1138,7 @@ function SectionFormations() {
   const [confirmDel, setConfirmDel] = useState({ open: false, message: "", onConfirm: null });
   const [erreurVideo, setErreurVideo] = useState(null);
 
-  const [fForm, setFForm] = useState({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: "", ordre: "" });
+  const [fForm, setFForm] = useState({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: parcoursId ? String(parcoursId) : "", ordre: "" });
   const { data: parcoursOptions = [] } = useParcoursList();
   const [mForm, setMForm] = useState({ titre: "", description: "", couleur: "#C45C7A", icone: "📚" });
   const [cForm, setCForm] = useState({ titre: "", description: "" });
@@ -1131,11 +1149,11 @@ function SectionFormations() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(`/formations`, { headers: getHeaders() })
+    api.get(`/formations${parcoursId ? `?parcoursId=${parcoursId}` : ""}`, { headers: getHeaders() })
       .then((r) => setFormations(r.data))
       .catch(() => setFormations([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [parcoursId]);
 
   const loadDetail = useCallback((formation) => {
     setDetail(formation); setDetailData(null);
@@ -1154,18 +1172,32 @@ function SectionFormations() {
     return "";
   };
 
+  const ouvrirEditionFormation = (formation) => {
+    setEditingFormationId(formation.id);
+    setFForm({
+      titre: formation.titre || "", description: formation.description || "",
+      niveau: formation.niveau || "Débutant", domaine: formation.domaine || "developpement",
+      parcours_id: String(formation.parcoursId || formation.parcours_id || parcoursId || ""),
+      ordre: String(formation.ordre ?? ""),
+    });
+    setDrawerF(true);
+  };
   const creerFormation = () => {
     const payload = {
       ...fForm,
       parcours_id: fForm.parcours_id || null,
       ordre: fForm.ordre === "" ? 0 : Number(fForm.ordre),
     };
-    api.post(`/formations`, payload, { headers: getHeaders() })
+    const request = editingFormationId
+      ? api.put(`/formations/${editingFormationId}`, payload, { headers: getHeaders() })
+      : api.post(`/formations`, payload, { headers: getHeaders() });
+    request
       .then(() => {
         load();
         queryClient.invalidateQueries({ queryKey: ["parcours"] });
         setDrawerF(false);
-        setFForm({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: "", ordre: "" });
+        setEditingFormationId(null);
+        setFForm({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: parcoursId ? String(parcoursId) : "", ordre: "" });
       })
       .catch((err) => alert(err.response?.data?.message || "Erreur"));
   };
@@ -1251,7 +1283,7 @@ function SectionFormations() {
             fontFamily: "'DM Sans', sans-serif", marginBottom: 24, padding: 0, transition: "color 0.15s" }}
           onMouseEnter={(e) => e.currentTarget.style.color = C.text}
           onMouseLeave={(e) => e.currentTarget.style.color = C.textMuted}>
-          {Icon.back} <span>Formations</span>
+          {Icon.back} <span>{parcoursTitle ? `Formations de ${parcoursTitle}` : "Formations"}</span>
         </button>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start",
           marginBottom: 16, animation: "fadeUp 0.3s ease both" }}>
@@ -1450,9 +1482,16 @@ function SectionFormations() {
 
   return (
     <div>
+      {onBack && <button type="button" onClick={onBack} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", padding: 0, marginBottom: 18, display: "flex", alignItems: "center", gap: 6 }}>
+        {Icon.back} Retour aux parcours
+      </button>}
       <SectionTitle>
-        Formations
-        <BtnPrimary onClick={() => setDrawerF(true)} icon={Icon.plus}>Nouvelle formation</BtnPrimary>
+        {parcoursTitle ? `Formations — ${parcoursTitle}` : "Formations"}
+        <BtnPrimary onClick={() => {
+          setEditingFormationId(null);
+          setFForm({ titre: "", description: "", niveau: "Débutant", domaine: "developpement", parcours_id: parcoursId ? String(parcoursId) : "", ordre: "" });
+          setDrawerF(true);
+        }} icon={Icon.plus}>Nouvelle formation</BtnPrimary>
       </SectionTitle>
       <Table loading={loading}
         cols={[
@@ -1475,12 +1514,13 @@ function SectionFormations() {
           { key: "created_at",  label: "Créé le",  render: (v) => <span style={{ fontSize: 12, color: C.textMuted }}>{fmtDate(v)}</span> },
           { key: "id", label: "Actions", render: (_, row) => (
             <div style={{ display: "flex", gap: 6 }}>
+              <IconBtn onClick={() => ouvrirEditionFormation(row)} icon={Icon.edit} title="Modifier la formation" />
               <IconBtn onClick={() => supprimerFormation(row)} icon={Icon.trash} danger title="Supprimer" />
             </div>
           )},
         ]}
         data={formations} empty="Aucune formation" />
-      <Drawer open={drawerF} onClose={() => setDrawerF(false)} title="Nouvelle formation">
+      <Drawer open={drawerF} onClose={() => { setDrawerF(false); setEditingFormationId(null); }} title={editingFormationId ? "Modifier la formation" : "Nouvelle formation"}>
         <Input label="Titre" value={fForm.titre} required onChange={(e) => setFForm({ ...fForm, titre: e.target.value })} />
         <Textarea label="Description" value={fForm.description} rows={3} required onChange={(e) => setFForm({ ...fForm, description: e.target.value })} />
         <Select label="Domaine" value={fForm.domaine} required onChange={(e) => setFForm({ ...fForm, domaine: e.target.value })}
@@ -1491,7 +1531,7 @@ function SectionFormations() {
           options={[{ value: "", label: "Choisir un parcours" }, ...parcoursOptions.map((p) => ({ value: String(p.id), label: p.titre }))]} />
         <Input label="Ordre dans le parcours" type="number" value={fForm.ordre} placeholder="0"
           onChange={(e) => setFForm({ ...fForm, ordre: e.target.value })} />
-        <BtnPrimary onClick={creerFormation} disabled={!fForm.titre || !fForm.description || !fForm.parcours_id} icon={Icon.plus}>Créer la formation</BtnPrimary>
+        <BtnPrimary onClick={creerFormation} disabled={!fForm.titre || !fForm.description || !fForm.parcours_id} icon={editingFormationId ? Icon.save : Icon.plus}>{editingFormationId ? "Enregistrer les modifications" : "Créer la formation"}</BtnPrimary>
       </Drawer>
       <ConfirmModal open={confirmDel.open} message={confirmDel.message}
         onConfirm={confirmDel.onConfirm} onCancel={() => setConfirmDel({ open: false })} />
