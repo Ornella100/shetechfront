@@ -52,13 +52,13 @@ body {
 .auth-panel--login {
   background:
     linear-gradient(155deg, rgba(43, 27, 36, 0.92), rgba(109, 46, 70, 0.72)),
-    url("./assets/home-hero.png") center/cover;
+    url("./assets/home-hero.jpg") center/cover;
 }
 
 .auth-panel--dark {
   background:
     linear-gradient(155deg, rgba(43, 27, 36, 0.94), rgba(109, 46, 70, 0.76)),
-    url("./assets/home-hero.png") center/cover;
+    url("./assets/home-hero.jpg") center/cover;
 }
 
 .circle { position: absolute; border-radius: 50%; filter: blur(0.2px); }
@@ -978,6 +978,8 @@ label.field-label {
   min-width: 0;
   overflow-y: auto;
   min-height: 100vh;
+  container-name: dashboard-main;
+  container-type: inline-size;
 }
 
 /* Grille interne du tableau de bord home */
@@ -999,7 +1001,7 @@ label.field-label {
   position: relative;
   background:
     linear-gradient(120deg, rgba(43, 27, 36, 0.93), rgba(109, 46, 70, 0.78)),
-    url("./assets/home-hero.png") center/cover;
+    url("./assets/home-hero.jpg") center/cover;
   color: #fff;
   box-shadow: 0 24px 60px rgba(43, 27, 36, 0.18);
   animation: dashRise 0.55s ease both;
@@ -1746,7 +1748,11 @@ label.field-label {
 .fd-layout {
   display: flex;
   align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100vh;
+  overflow-x: clip;
   background: #f9f0f3;
 }
 
@@ -1763,8 +1769,9 @@ label.field-label {
 }
 
 .fd-content {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
+  max-width: 100%;
   padding: 32px 28px;
 }
 
@@ -1782,6 +1789,8 @@ label.field-label {
 }
 
 .fd-pane {
+  width: 100%;
+  min-width: 0;
   animation: fdFadeUp 0.25s ease;
 }
 
@@ -1825,11 +1834,81 @@ label.field-label {
   }
 }
 
+@container dashboard-main (min-width: 1051px) and (max-width: 1250px) {
+  .fd-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .fd-sidebar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: auto;
+    height: 100vh;
+  }
+
+  .fd-content {
+    grid-column: 2;
+  }
+
+  .fd-resources {
+    grid-column: 2;
+    width: auto;
+    height: auto;
+    position: static;
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid #eadfe4;
+  }
+}
+
+@container dashboard-main (max-width: 1050px) {
+  .fd-layout {
+    flex-direction: column;
+  }
+
+  .fd-sidebar,
+  .fd-resources {
+    width: 100%;
+    position: static;
+    height: auto;
+  }
+
+  .fd-sidebar {
+    max-height: 320px;
+    border-right: 0;
+    border-bottom: 1px solid #eadfe4;
+  }
+
+  .fd-content {
+    width: 100%;
+    padding: 24px 18px;
+  }
+
+  .fd-resources {
+    border-left: 0;
+    border-top: 1px solid #eadfe4;
+  }
+}
+
 /* ===================== MINI MARKDOWN (contenu des leçons) ===================== */
 .fd-prose {
+  min-width: 0;
+  max-width: 100%;
   color: #374151;
   font-size: 15px;
   line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.fd-prose p,
+.fd-prose li,
+.fd-prose blockquote,
+.fd-prose a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .fd-prose h2,
@@ -1888,6 +1967,17 @@ label.field-label {
   margin: 0.5em 0;
 }
 
+.fd-prose iframe,
+.fd-prose video {
+  max-width: 100%;
+}
+
+.fd-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .fd-prose code {
   background: #f4e9ee;
   color: #a34462;
@@ -1903,6 +1993,8 @@ label.field-label {
   padding: 16px 18px;
   border-radius: 10px;
   overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
   margin: 0 0 1em;
 }
 

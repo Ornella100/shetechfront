@@ -295,7 +295,6 @@ export default function MessagerieWidget() {
   }, [user]);
 
   const rafraichirTout = useCallback(() => {
-    setLoadingListe(true);
     Promise.allSettled([chargerConversations(), chargerProjets()]).finally(() => setLoadingListe(false));
   }, [chargerConversations, chargerProjets]);
 

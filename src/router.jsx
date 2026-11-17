@@ -1,27 +1,32 @@
+/* eslint-disable react-refresh/only-export-components -- un composant de configuration de routes est exporté, pas une page. */
+import { lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import HomePage from "./HomePage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import DashboardLayout from "./layouts/DashboardLayout";
-import DashboardHome from "./pages/DashboardHome";
-import ProfilPage from "./pages/ProfilPage";
-import FormationsPage from "./pages/FormationsPage";
-import FormationDetailPage from "./pages/FormationDetailPage";
-import Projets from "./Projets";
-import Community from "./Community";
-import Certificats from "./Certificats";
-import CoursDetail from "./pages/CoursDetail";
-import { QuizFormationPage, QuizParcoursPage } from "./pages/QuizFinalPage";
-import { CertificatFormationPage, CertificatParcoursPage } from "./pages/CertificatPage";
-import AbonnementPage from "./pages/AbonnementPage";
-import MarketplacePage from "./pages/MarketplacePage";
-import MentoratPage from "./pages/MentoratPage";
-import ActualitesPage from "./pages/ActualitesPage";
-import AdminDashboard from "./AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+
+const HomePage = lazy(() => import("./HomePage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
+const DashboardHome = lazy(() => import("./pages/DashboardHome"));
+const ProfilPage = lazy(() => import("./pages/ProfilPage"));
+const FormationsPage = lazy(() => import("./pages/FormationsPage"));
+const FormationDetailPage = lazy(() => import("./pages/FormationDetailPage"));
+const Projets = lazy(() => import("./Projets"));
+const Community = lazy(() => import("./Community"));
+const Certificats = lazy(() => import("./Certificats"));
+const CoursDetail = lazy(() => import("./pages/CoursDetail"));
+const QuizFormationPage = lazy(() => import("./pages/QuizFinalPage").then((module) => ({ default: module.QuizFormationPage })));
+const QuizParcoursPage = lazy(() => import("./pages/QuizFinalPage").then((module) => ({ default: module.QuizParcoursPage })));
+const CertificatFormationPage = lazy(() => import("./pages/CertificatPage").then((module) => ({ default: module.CertificatFormationPage })));
+const CertificatParcoursPage = lazy(() => import("./pages/CertificatPage").then((module) => ({ default: module.CertificatParcoursPage })));
+const AbonnementPage = lazy(() => import("./pages/AbonnementPage"));
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
+const MentoratPage = lazy(() => import("./pages/MentoratPage"));
+const ActualitesPage = lazy(() => import("./pages/ActualitesPage"));
+const AdminDashboard = lazy(() => import("./AdminDashboard"));
 
 const router = createBrowserRouter([
   { path: "/", element: <HomePage /> },

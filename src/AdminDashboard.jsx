@@ -816,9 +816,8 @@ function SectionUsers() {
   const PER_PAGE = 10;
 
   const load = useCallback(() => {
-    setLoading(true); setError("");
     api.get(`/admin/users`, { headers: getHeaders() })
-      .then((r) => setUsers(r.data))
+      .then((r) => { setError(""); setUsers(r.data); })
       .catch(() => { setUsers([]); setError("Impossible de charger les utilisateurs depuis le serveur."); })
       .finally(() => setLoading(false));
   }, []);
@@ -1192,7 +1191,6 @@ function SectionFormations({ parcoursId = null, parcoursTitle = null, onBack = n
   const [editLForm, setEditLForm] = useState({ titre: "", description: "", dureeMinutes: "", contenuTexte: "" });
 
   const load = useCallback(() => {
-    setLoading(true);
     api.get(`/formations${parcoursId ? `?parcoursId=${parcoursId}` : ""}`, { headers: getHeaders() })
       .then((r) => setFormations(r.data))
       .catch(() => setFormations([]))
@@ -1600,7 +1598,6 @@ function SectionProjets() {
   const ouvrirChat = useMessagerie((s) => s.ouvrir);
 
   const load = useCallback(() => {
-    setLoading(true);
     api.get(`/admin/projets`, { headers: getHeaders() })
       .then((r) => setProjets(r.data))
       .catch(() => setProjets([]))

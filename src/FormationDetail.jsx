@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import CertificatForm from "./CertificatForm";
-import homeHero from "./assets/home-hero.png";
+import homeHero from "./assets/home-hero.jpg";
 import api from "./lib/api";
 const ACCENT = "#C45C7A";
 
 /* ─────────────────────────────────────────────
    PAGE QUIZ
 ───────────────────────────────────────────── */
-function QuizRunner({ title, subtitle, questionsUrl, submitUrl, backLabel = "â Retour", onBack, onReussi }) {
+function QuizRunner({ title, subtitle, questionsUrl, submitUrl, onBack, onReussi }) {
   const [questions, setQuestions] = useState([]);
   const [reponses, setReponses] = useState({});
   const [resultat, setResultat] = useState(null);
@@ -203,10 +203,12 @@ export default function FormationDetail({ formation, domaine, onBack }) {
   const [quizFinal, setQuizFinal] = useState({ existe: false, reussi: false, score: null });
   const [showCertificatForm, setShowCertificatForm] = useState(false);
   const [progressionFormation, setProgressionFormation] = useState(0);
+  const formationId = formation?.id;
 
 
   useEffect(() => {
-    if (!formation) return;
+    if (!formationId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- remet à zéro l'état dépendant de la formation de la route.
     setModules([]);
     setSelectedModule(null);
     setExpandedModule(null);
@@ -215,11 +217,11 @@ export default function FormationDetail({ formation, domaine, onBack }) {
     setVueQuiz(false);
     setVueQuizFinal(false);
 
-    api.get(`/formations/${formation.id}/quiz-final/status`)
+    api.get(`/formations/${formationId}/quiz-final/status`)
       .then((r) => setQuizFinal({ existe: r.data.existe, reussi: r.data.reussi, score: r.data.score }))
       .catch(() => setQuizFinal({ existe: false, reussi: false, score: null }));
 
-    api.get(`/formations/${formation.id}`)
+    api.get(`/formations/${formationId}`)
       .then((res) => {
         const mods = res.data.modules || [];
         setModules(mods);
@@ -245,13 +247,13 @@ export default function FormationDetail({ formation, domaine, onBack }) {
             .catch(() => {});
         });
 
-        api.get(`/formations/${formation.id}/progression-calculee`)
+        api.get(`/formations/${formationId}/progression-calculee`)
           .then((r) => setProgressionFormation(r.data.pourcentage || 0))
           .catch(() => {});
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [formation?.id]);
+  }, [formationId]);
 
   useEffect(() => {
     if (!formation?.id || !selectedLecon) return;
@@ -296,7 +298,7 @@ export default function FormationDetail({ formation, domaine, onBack }) {
       if (url.includes("youtu.be/")) {
         return url.split("youtu.be/")[1].split("?")[0];
       }
-    } catch {}
+    } catch (error) { console.error("URL vidéo invalide :", error); }
     return "";
   };
 

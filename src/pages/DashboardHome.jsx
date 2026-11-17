@@ -34,7 +34,6 @@ export default function DashboardHome() {
   const prenom = user?.nom?.split(" ")[0] || "Utilisatrice";
 
   const charger = () => {
-    setLoading(true);
     Promise.allSettled([api.get("/progression"), api.get("/projets")])
       .then(([prog, proj]) => {
         setErreurProgression(prog.status === "rejected");

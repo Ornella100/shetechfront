@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faListCheck, faAward } from '@fortawesome/free-solid-svg-icons';
+import {
+  faListCheck, faAward, faBookOpen, faCode, faCloud, faChartLine,
+  faBullhorn, faStore, faPeopleGroup, faBriefcase, faShieldHalved,
+  faPenRuler, faEnvelope, faBullseye, faTruck, faHandshake,
+  faChartPie, faNetworkWired, faUniversalAccess, faTriangleExclamation,
+} from '@fortawesome/free-solid-svg-icons';
 import {
   useFormationDetail,
   useFormationProgressionLecons,
@@ -13,6 +18,37 @@ import api from '../lib/api';
 
 const ACCENT = '#C45C7A';
 const GOLD = '#E8A554';
+
+const MODULE_ICONS = {
+  'book-open': faBookOpen,
+  code: faCode,
+  cloud: faCloud,
+  'chart-line': faChartLine,
+  brain: faChartLine,
+  'scale-balanced': faShieldHalved,
+  bullhorn: faBullhorn,
+  'magnifying-glass': faChartLine,
+  bullseye: faBullseye,
+  envelope: faEnvelope,
+  store: faStore,
+  truck: faTruck,
+  'cart-shopping': faStore,
+  'people-group': faPeopleGroup,
+  'list-check': faListCheck,
+  'chart-pie': faChartPie,
+  handshake: faHandshake,
+  briefcase: faBriefcase,
+  'file-contract': faBookOpen,
+  'shield-heart': faShieldHalved,
+  users: faPeopleGroup,
+  'pen-ruler': faPenRuler,
+  'universal-access': faUniversalAccess,
+  'magnifying-glass-chart': faChartLine,
+  'shield-halved': faShieldHalved,
+  'network-wired': faNetworkWired,
+  'bug-slash': faShieldHalved,
+  'triangle-exclamation': faTriangleExclamation,
+};
 
 function isYoutube(url = '') {
   return url.includes('youtube.com') || url.includes('youtu.be');
@@ -63,6 +99,8 @@ export default function FormationDetailPage() {
   const [openModules, setOpenModules] = useState({});
   const [selectedLeconId, setSelectedLeconId] = useState(null);
   const [demarrageErreur, setDemarrageErreur] = useState('');
+  const inscriptionRequise = formation?.inscriptionRequise;
+  const accesRestreint = formation?.accesRestreint;
 
   // Liste plate ordonnée de toutes les leçons (pour navigation précédent/suivant)
   const flat = useMemo(() => {
@@ -86,7 +124,7 @@ export default function FormationDetailPage() {
   const suivante = idx >= 0 && idx < flat.length - 1 ? flat[idx + 1] : null;
 
   useEffect(() => {
-    if (!formation || formation.inscriptionRequise || formation.accesRestreint || flat.length === 0) return undefined;
+    if (!formationId || inscriptionRequise || accesRestreint || flat.length === 0) return undefined;
     let actif = true;
     api.post(`/formations/${formationId}/demarrer`)
       .then(() => { if (actif) setDemarrageErreur(''); })
@@ -94,7 +132,7 @@ export default function FormationDetailPage() {
         if (actif) setDemarrageErreur(error.response?.data?.message || 'La progression n’a pas pu être enregistrée.');
       });
     return () => { actif = false; };
-  }, [formation?.id, formation?.inscriptionRequise, formation?.accesRestreint, formationId, flat.length]);
+  }, [formationId, inscriptionRequise, accesRestreint, flat.length]);
 
   const selectLecon = (entry) => {
     setSelectedLeconId(entry.lecon.id);
@@ -215,7 +253,7 @@ export default function FormationDetailPage() {
                   transition: 'all 0.25s ease',
                 }}
               >
-                <span style={{ fontSize: '16px' }}>{module.icone || '📚'}</span>
+                <FontAwesomeIcon icon={MODULE_ICONS[module.icone] || faBookOpen} aria-hidden="true" />
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {module.titre}
                 </span>
@@ -332,7 +370,7 @@ export default function FormationDetailPage() {
             {/* Contenu texte en mini markdown */}
             {lecon.contenuTexte && (
               <div
-                style={{ background: '#fff', border: '1px solid #f0e4ea', borderRadius: '12px', padding: '26px 28px', marginBottom: '22px' }}
+                style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', background: '#fff', border: '1px solid #f0e4ea', borderRadius: '12px', padding: '26px 28px', marginBottom: '22px' }}
               >
                 <div className="fd-prose" dangerouslySetInnerHTML={{ __html: miniMdToHtml(lecon.contenuTexte) }} />
               </div>

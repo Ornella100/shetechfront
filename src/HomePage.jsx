@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import heroImage from "./assets/home-hero.png";
+import heroImage from "./assets/home-hero.jpg";
 import api from "./lib/api";
 
 const navLinks = [

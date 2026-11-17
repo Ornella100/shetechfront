@@ -338,7 +338,6 @@ function SectionUsers() {
   const PER_PAGE = 10;
 
   const load = useCallback(() => {
-    setLoading(true);
     axios.get(`${API}/admin/users`, { headers: getHeaders() })
       .then((r) => setUsers(r.data))
       .catch(() => setUsers(MOCK.users))
@@ -436,7 +435,6 @@ function SectionFormations() {
   const [vForm, setVForm] = useState({ titre: "", url: "", description: "", duree: "" });
 
   const load = useCallback(() => {
-    setLoading(true);
     axios.get(`${API}/formations`, { headers: getHeaders() })
       .then((r) => setFormations(r.data))
       .catch(() => setFormations(MOCK.formations))

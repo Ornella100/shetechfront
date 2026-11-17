@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -231,7 +231,7 @@ export default function Projets() {
   const [newLivrableLien, setNewLivrableLien] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  const handleAuthError = (err) => {
+  const handleAuthError = useCallback((err) => {
     if (err.response?.status === 401 || err.response?.status === 403) {
       alert("Votre session a expire. Veuillez vous reconnecter.");
       logout();
@@ -239,7 +239,7 @@ export default function Projets() {
       return true;
     }
     return false;
-  };
+  }, [logout, navigate]);
 
   const getProjectProgress = (statut) => {
     switch (statut) {
@@ -263,9 +263,7 @@ export default function Projets() {
   const currentUploadProjet = projets.find((projet) => projet.id === currentProjetId);
   const currentUploadDetails = getDomainDetails(currentUploadProjet?.domaine);
 
-  useEffect(() => { fetchProjets(); }, []);
-
-  const fetchProjets = async () => {
+  const fetchProjets = useCallback(async () => {
     try {
       const response = await api.get("/projets");
       const list = response.data.map(normalizeProjet);
@@ -277,7 +275,12 @@ export default function Projets() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthError]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- charge les données liées à la route.
+    fetchProjets();
+  }, [fetchProjets]);
 
   const fetchLivrables = async (projetId) => {
     try {

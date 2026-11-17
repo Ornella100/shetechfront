@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import homeHero from "./assets/home-hero.jpg";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faComments, faFileArrowDown, faLink } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "./store/authStore";
 import { useMessagerie } from "./store/messagerieStore";
-import homeHero from "./assets/home-hero.png";
 import api from "./lib/api";
 
 const ACCENT = "#C45C7A";
@@ -113,7 +113,7 @@ function ForumThread({ post, onVote, user, onRefresh }) {
       const res = await api.get(`/community/posts/${post.id}/responses`);
       setResponses(res.data);
       setOpen(true);
-    } catch {}
+    } catch (error) { console.error("Impossible de charger les réponses :", error); }
     setLoading(false);
   };
 
@@ -127,7 +127,7 @@ function ForumThread({ post, onVote, user, onRefresh }) {
       const res = await api.get(`/community/posts/${post.id}/responses`);
       setResponses(res.data);
       onRefresh();
-    } catch {}
+    } catch (error) { console.error("Impossible d'envoyer la réponse :", error); }
     setSending(false);
   };
 
@@ -137,7 +137,7 @@ function ForumThread({ post, onVote, user, onRefresh }) {
       const res = await api.get(`/community/posts/${post.id}/responses`);
       setResponses(res.data);
       onRefresh();
-    } catch {}
+    } catch (error) { console.error("Impossible de marquer la solution :", error); }
   };
 
   const handleVoteResponse = async (r) => {
@@ -145,7 +145,7 @@ function ForumThread({ post, onVote, user, onRefresh }) {
       await api.post(`/community/vote`, { target_type: "reponse", target_id: r.id, valeur: r.mon_vote === 1 ? 0 : 1 });
       const res = await api.get(`/community/posts/${post.id}/responses`);
       setResponses(res.data);
-    } catch {}
+    } catch (error) { console.error("Impossible d'enregistrer le vote :", error); }
   };
 
   return (
@@ -402,7 +402,7 @@ function ProfileCard({ u, onFollow }) {
 }
 
 /* ── Modal nouvelle question ── */
-function NewPostModal({ onClose, onSuccess, user }) {
+function NewPostModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ title: "", content: "", category: "" });
   const [sending, setSending] = useState(false);
   const categories = [
@@ -418,7 +418,7 @@ function NewPostModal({ onClose, onSuccess, user }) {
       await api.post(`/community/posts`, { titre: form.title, contenu: form.content, tags: form.category || null });
       onSuccess();
       onClose();
-    } catch {}
+    } catch (error) { console.error("Impossible de publier la question :", error); }
     setSending(false);
   };
 
@@ -528,6 +528,7 @@ function ProjectCard({ projet, user, index }) {
 
   // Synchroniser si le parent recharge
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- répercute les mises à jour reçues du parent.
     setCommentaires(projet.commentaires || []);
     setLikesCount(projet.nb_likes || 0);
     setUserLiked(projet.user_liked || false);
@@ -783,7 +784,7 @@ export default function Community() {
     "E-commerce", "Leadership", "Freelance", "Design UI/UX", "Cybersécurité"
   ];
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === "forum") {
@@ -796,12 +797,12 @@ export default function Community() {
         const res = await api.get(`/community/users`);
         setUsers(res.data);
       }
-    } catch {}
+    } catch (error) { console.error("Impossible de charger la communauté :", error); }
     setLoading(false);
-  };
+  }, [activeTab, filterCat, search]);
 
   // Projets personnels partagés par les membres (jamais les projets SheTech)
-  const loadProjets = async () => {
+  const loadProjets = useCallback(async () => {
     setProjetsLoading(true);
     try {
       const res = await api.get(`/projets/publics`);
@@ -810,7 +811,7 @@ export default function Community() {
       console.error("Erreur chargement projets:", err);
     }
     setProjetsLoading(false);
-  };
+  }, []);
 
   const handleVote = async (post) => {
     try {
@@ -820,7 +821,7 @@ export default function Community() {
         valeur: post.mon_vote === 1 ? 0 : 1,
       });
       load();
-    } catch {}
+    } catch (error) { console.error("Impossible d'enregistrer le vote :", error); }
   };
 
   const handleFollow = async (userId, follow) => {
@@ -828,15 +829,16 @@ export default function Community() {
       if (follow) await api.post(`/community/users/${userId}/follow`);
       else await api.delete(`/community/users/${userId}/follow`);
       load();
-    } catch {}
+    } catch (error) { console.error("Impossible de suivre ce profil :", error); }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- déclenche la récupération réseau au changement d'onglet.
     load();
     if (activeTab === "projets") {
       loadProjets();
     }
-  }, [activeTab, filterCat]);
+  }, [activeTab, filterCat, load, loadProjets]);
 
   const tabs = [
     { id: "forum", label: "Forum", icon: "" },
@@ -1000,7 +1002,7 @@ export default function Community() {
                 </div>
               ) : posts.map((p, index) => (
                 <div key={p.id} style={{ animation: `slideIn 0.3s ease-out ${index * 0.1}s both` }}>
-                  <ForumThread post={p} onVote={handleVote} user={user} onRefresh={load} />
+                  <ForumThread post={p} onVote={handleVote} onRefresh={load} />
                 </div>
               ))}
             </div>

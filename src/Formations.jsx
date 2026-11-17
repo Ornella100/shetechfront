@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FormationDetail from "./FormationDetail";
-import homeHero from "./assets/home-hero.png";
+import homeHero from "./assets/home-hero.jpg";
 import { useParcoursList, useParcoursDetail } from "./hooks/useParcours";
 
 const ACCENT = "#C45C7A";

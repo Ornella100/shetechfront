@@ -12,20 +12,23 @@ export default function AdminCertificats() {
   const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
-    setLoading(true); setError('');
     try {
       const [e, i, p] = await Promise.all([
         api.get('/admin/certificats/parcours/eligibles'),
         api.get('/admin/certificats'),
         api.get('/admin/certificats/parcours'),
       ]);
+      setError('');
       setEligible(e.data); setIssued(i.data); setParcours(p.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Impossible de charger les certificats.');
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- charge les certificats depuis l'API.
+    void load();
+  }, [load]);
 
   const uploadTemplate = async (item) => {
     const file = files[item.id];
