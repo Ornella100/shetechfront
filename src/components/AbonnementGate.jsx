@@ -5,7 +5,7 @@ import { faLock, faCrown } from '@fortawesome/free-solid-svg-icons';
 const ACCENT = '#C45C7A';
 const GOLD = '#E8A554';
 
-// Écran affiché à la place du contenu quand l'accès a expiré (402 ABONNEMENT_REQUIS).
+// Écran affiché à la place du contenu tant que le pack n'a pas été acheté.
 export default function AbonnementGate({ message }) {
   return (
     <div style={{
@@ -19,10 +19,10 @@ export default function AbonnementGate({ message }) {
         <FontAwesomeIcon icon={faLock} style={{ fontSize: '28px', color: ACCENT }} />
       </div>
       <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1a0f14', margin: '0 0 10px' }}>
-        Contenu réservé aux abonnées
+        Formation réservée aux apprenantes inscrites
       </h2>
       <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.7, margin: '0 0 24px' }}>
-        {message || 'Votre mois d\'essai gratuit est terminé. Abonnez-vous pour continuer à suivre vos formations et débloquer vos certificats.'}
+        {message || 'Un paiement unique de 150 000 FCFA active l’accès à trois parcours, sans renouvellement.'}
       </p>
       <Link
         to="/dashboard/abonnement"
@@ -33,7 +33,7 @@ export default function AbonnementGate({ message }) {
         }}
       >
         <FontAwesomeIcon icon={faCrown} style={{ marginRight: '8px' }} />
-        Découvrir l'abonnement
+        Acheter le pack · 150 000 FCFA
       </Link>
     </div>
   );

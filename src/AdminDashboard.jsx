@@ -120,7 +120,7 @@ const NAV_ITEMS = [
   { id: "mentorat",  label: "Mentorat",        icon: Icon.stats },
   { id: "certificats", label: "Certificats",   icon: Icon.check },
   { id: "actualites", label: "Actualités",      icon: Icon.stats },
-  { id: "abonnements", label: "Abonnements",    icon: Icon.stats },
+  { id: "abonnements", label: "Achats & accès", icon: Icon.stats },
   { id: "stats",      label: "Statistiques",    icon: Icon.stats },
 ];
 
@@ -751,7 +751,7 @@ function SectionDashboard() {
           Tableau de bord admin
         </h1>
         <p style={{ margin: 0, maxWidth: 640, color: "rgba(255,255,255,0.72)", fontSize: 14, lineHeight: 1.65 }}>
-          Console de pilotage : comptes, contenus, mentorat, abonnements et certificats de la plateforme.
+          Console de pilotage : comptes, contenus, mentorat, achats et certificats de la plateforme.
         </p>
       </div>
       {error && <p role="alert" style={{ color: "#b42318", marginBottom: 16 }}>{error}</p>}
@@ -760,7 +760,7 @@ function SectionDashboard() {
         <KpiCard label="Formations" value={loading ? "…" : fmt(formations.length)} sub="Contenus publiés" delay={80} tone="green" />
         <KpiCard label="Mentorat en attente" value={loading ? "…" : fmt(sessions.filter((s) => s.statut === "en_attente" || s.statut === "réservé").length)} sub="Demandes à traiter" delay={160} tone="gold" />
         <KpiCard label="Certificats émis" value={loading ? "…" : fmt(certificats.length)} sub="Documents enregistrés" delay={220} tone="rose" />
-        <KpiCard label="Abonnées" value={loading ? "…" : fmt(abonnements.filter((u) => u.acces).length)} sub="Accès actif ou essai" delay={280} tone="green" />
+        <KpiCard label="Accès actifs" value={loading ? "…" : fmt(abonnements.filter((u) => u.acces).length)} sub="Pack acheté ou accès équipe" delay={280} tone="green" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div>
@@ -1062,23 +1062,20 @@ function SectionParcours() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// ABONNEMENTS — traçabilité des essais gratuits, abonnements et paiements
+// ACHATS & ACCÈS — suivi du pack trois parcours et des paiements
 // ────────────────────────────────────────────────────────────────────────────────
 function SectionAbonnements() {
   const { data: users = [], isLoading: loading } = useAdminAbonnements();
   const [detail, setDetail] = useState(null);
-  const [now] = useState(() => Date.now());
   const badge = (texte, couleur, fond) => (
     <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
       color: couleur, background: fond }}>{texte}</span>
   );
 
   const statutUser = (u) => {
-    const aboActif = u.abonnements?.find((a) => a.statut === "active" && new Date(a.dateFin).getTime() > now);
-    if (aboActif) return badge(`Abonnée jusqu'au ${fmtDate(aboActif.dateFin)}`, "#059669", "#EDFAF3");
-    if (u.trialEndsAt && new Date(u.trialEndsAt).getTime() > now)
-      return badge(`Essai jusqu'au ${fmtDate(u.trialEndsAt)}`, "#B45309", "#FFF7E8");
-    return badge("Accès expiré", "#c0392b", "#FDEEEA");
+    const achatActif = u.abonnements?.find((a) => a.statut === "active" && (!a.dateFin || new Date(a.dateFin).getTime() > Date.now()));
+    if (achatActif) return badge(achatActif.dateFin ? `Accès jusqu'au ${fmtDate(achatActif.dateFin)}` : "Pack trois parcours actif", "#059669", "#EDFAF3");
+    return badge("Aucun pack actif", "#c0392b", "#FDEEEA");
   };
 
   return (
@@ -1096,7 +1093,7 @@ function SectionAbonnements() {
           { key: "email", label: "Email", render: (v) => (
             <span style={{ fontSize: 12, color: C.textMuted }}>{v}</span>
           )},
-          { key: "trialEndsAt", label: "Fin d'essai", render: (v) => (
+          { key: "createdAt", label: "Inscription", render: (v) => (
             <span style={{ fontSize: 12, color: C.textMuted }}>{fmtDate(v)}</span>
           )},
           { key: "id", label: "Statut", render: (v, row) => statutUser(row) },
@@ -1114,19 +1111,19 @@ function SectionAbonnements() {
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>{detail.email}</div>
               <div style={{ fontSize: 12, color: C.textMuted }}>
-                Inscrite le {fmtDate(detail.createdAt)} — essai gratuit jusqu'au {fmtDate(detail.trialEndsAt)}
+                Inscrite le {fmtDate(detail.createdAt)}
               </div>
               <div style={{ marginTop: 8 }}>{statutUser(detail)}</div>
             </div>
 
             <div style={{ fontSize: 12, fontWeight: 600, color: C.textSub, textTransform: "uppercase",
-              letterSpacing: "0.07em", margin: "18px 0 10px" }}>Abonnements</div>
+              letterSpacing: "0.07em", margin: "18px 0 10px" }}>Achats de parcours</div>
             {!detail.abonnements?.length ? (
-              <div style={{ fontSize: 12, color: C.textMuted }}>Aucun abonnement.</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>Aucun achat enregistré.</div>
             ) : detail.abonnements.map((a) => (
               <div key={a.id} style={{ background: C.bg, border: `1px solid ${C.border}`,
                 borderRadius: 8, padding: "10px 14px", marginBottom: 8, fontSize: 12, color: C.text }}>
-                {fmtDate(a.dateDebut)} → {fmtDate(a.dateFin)}
+                {fmtDate(a.dateDebut)} → {a.dateFin ? fmtDate(a.dateFin) : "Accès permanent"}
                 <span style={{ color: C.textMuted }}> • {a.source} • {a.statut}</span>
               </div>
             ))}

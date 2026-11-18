@@ -6,6 +6,7 @@ import {
   useParcoursList, useParcoursDetail,
   useMesInscriptions, useInscriptionParcours, useDesinscriptionParcours,
 } from '../hooks/useParcours';
+import { useAbonnementStatut } from '../hooks/useAbonnement';
 
 const ACCENT = '#C45C7A';
 const BG = '#F9F0F3';
@@ -16,6 +17,7 @@ export default function FormationsPage() {
   const [searchParams] = useSearchParams();
   const onboarding = searchParams.get('onboarding') === '1';
   const { data: parcours, isLoading, isError: parcoursError } = useParcoursList();
+  const { data: access } = useAbonnementStatut();
   const { data: inscriptions, isLoading: inscriptionsLoading, isError: inscriptionsError } = useMesInscriptions();
   const { mutate: inscrire, isPending: inscriptionEnCours, error: erreurInscription, reset: resetInscription } = useInscriptionParcours();
   const { mutate: desinscrire } = useDesinscriptionParcours();
@@ -26,7 +28,7 @@ export default function FormationsPage() {
   const termines = new Set(
     (inscriptions?.inscriptions || []).filter(i => i.statut === 'termine').map(i => i.parcours_id)
   );
-  const actifs = inscriptions?.actifs ?? 0;
+  const actifs = inscriptions?.selectionnes ?? inscriptions?.actifs ?? 0;
   const max = inscriptions?.max ?? 3;
   const limiteAtteinte = actifs >= max;
   const inscriptionEtatInconnu = inscriptionsLoading || inscriptionsError;
@@ -74,8 +76,7 @@ export default function FormationsPage() {
               🎉 Bienvenue sur SheTech !
             </p>
             <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
-              Choisissez jusqu'à <strong>{max} parcours</strong> qui vous intéressent pour commencer votre
-              apprentissage. Vous profitez d'un <strong>mois d'essai gratuit</strong> sur toutes les formations.
+              Le paiement unique de <strong>150 000 FCFA</strong> est nécessaire avant de choisir jusqu'à <strong>{max} parcours</strong> et de commencer les formations.
             </p>
           </div>
         )}
@@ -191,6 +192,7 @@ export default function FormationsPage() {
         <ParcoursModal
           parcoursId={selectedParcoursId}
           isInscrit={inscrits.has(selectedParcoursId)}
+          acces={Boolean(access?.acces)}
           limiteAtteinte={limiteAtteinte}
           inscriptionEtatInconnu={inscriptionEtatInconnu}
           inscriptionsError={inscriptionsError}
@@ -204,7 +206,7 @@ export default function FormationsPage() {
   );
 }
 
-function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatInconnu, inscriptionsError, max, inscriptionEnCours, onInscrire, onClose }) {
+function ParcoursModal({ parcoursId, isInscrit, acces, limiteAtteinte, inscriptionEtatInconnu, inscriptionsError, max, inscriptionEnCours, onInscrire, onClose }) {
   const navigate = useNavigate();
   const { data: parcours, isLoading, isError } = useParcoursDetail(parcoursId);
   const contientLecons = parcours?.formations?.some(formation =>
@@ -290,21 +292,23 @@ function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatI
                 </p>
               )}
 
-              {!isInscrit && parcours?.formations?.length > 0 && (
+              {(!isInscrit || !acces) && parcours?.formations?.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#fdf7f9', border: '1px solid #f0dce4', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px' }}>
                   <span style={{ color: inscriptionsError ? '#991b1b' : '#6b7280', fontSize: '13px' }}>
                     {inscriptionsError
                       ? 'Impossible de vérifier vos inscriptions. Réessayez dans quelques instants.'
+                      : !acces
+                        ? 'Le pack doit être payé avant de choisir ce parcours.'
                       : contientLecons
                         ? 'Inscrivez-vous à ce parcours pour démarrer une formation.'
                         : 'Les formations de ce parcours attendent encore leurs premières leçons.'}
                   </span>
                   <button
-                    onClick={onInscrire}
-                    disabled={!contientLecons || limiteAtteinte || inscriptionEtatInconnu || inscriptionEnCours}
-                    style={{ background: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu ? ACCENT : '#f3f4f6', color: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu ? '#fff' : '#9ca3af', border: 'none', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontWeight: 800, cursor: contientLecons && !limiteAtteinte && !inscriptionEtatInconnu && !inscriptionEnCours ? 'pointer' : 'not-allowed' }}
+                    onClick={acces ? onInscrire : () => navigate('/dashboard/abonnement')}
+                    disabled={acces && (!contientLecons || limiteAtteinte || inscriptionEtatInconnu || inscriptionEnCours)}
+                    style={{ background: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu) ? ACCENT : '#f3f4f6', color: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu) ? '#fff' : '#9ca3af', border: 'none', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontWeight: 800, cursor: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu && !inscriptionEnCours) ? 'pointer' : 'not-allowed' }}
                   >
-                    {inscriptionEnCours ? 'Inscription...' : inscriptionEtatInconnu ? 'Vérification...' : limiteAtteinte ? `Limite de ${max} parcours atteinte` : contientLecons ? 'Suivre ce parcours' : 'En préparation'}
+                    {!acces ? 'Payer pour choisir ce parcours' : inscriptionEnCours ? 'Inscription...' : inscriptionEtatInconnu ? 'Vérification...' : limiteAtteinte ? `Limite de ${max} parcours atteinte` : contientLecons ? 'Choisir ce parcours' : 'En préparation'}
                   </button>
                 </div>
               )}
@@ -321,7 +325,7 @@ function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatI
                   return (
                     <div
                       key={formation.id}
-                      onClick={() => { if (isInscrit && nbLecons > 0) open(); }}
+                      onClick={() => { if (isInscrit && acces && nbLecons > 0) open(); }}
                       style={{
                         border: '1px solid #e5e7eb',
                         borderRadius: '10px',
@@ -330,7 +334,7 @@ function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatI
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         gap: '16px',
-                        cursor: isInscrit && nbLecons > 0 ? 'pointer' : 'default',
+                        cursor: isInscrit && acces && nbLecons > 0 ? 'pointer' : 'default',
                         transition: 'all 0.2s ease',
                         background: '#fff',
                       }}
@@ -352,21 +356,21 @@ function ParcoursModal({ parcoursId, isInscrit, limiteAtteinte, inscriptionEtatI
                         </p>
                       </div>
                       <button
-                        onClick={e => { e.stopPropagation(); if (isInscrit && nbLecons > 0) open(); }}
-                        disabled={!isInscrit || nbLecons === 0}
+                        onClick={e => { e.stopPropagation(); if (isInscrit && acces && nbLecons > 0) open(); }}
+                        disabled={!isInscrit || !acces || nbLecons === 0}
                         style={{
                           flex: 'none',
-                          background: isInscrit && nbLecons > 0 ? ACCENT : '#f3f4f6',
-                          color: isInscrit && nbLecons > 0 ? '#fff' : '#9ca3af',
+                          background: isInscrit && acces && nbLecons > 0 ? ACCENT : '#f3f4f6',
+                          color: isInscrit && acces && nbLecons > 0 ? '#fff' : '#9ca3af',
                           border: 'none',
                           borderRadius: '8px',
                           padding: '10px 16px',
                           fontSize: '13px',
                           fontWeight: 700,
-                          cursor: isInscrit && nbLecons > 0 ? 'pointer' : 'not-allowed',
+                          cursor: isInscrit && acces && nbLecons > 0 ? 'pointer' : 'not-allowed',
                         }}
                       >
-                        {nbLecons === 0 ? 'Contenu à préparer' : isInscrit ? 'Commencer →' : 'Inscrivez-vous d’abord'}
+                        {nbLecons === 0 ? 'Contenu à préparer' : !acces ? 'Paiement requis' : isInscrit ? 'Commencer →' : 'Choisissez ce parcours'}
                       </button>
                     </div>
                   );

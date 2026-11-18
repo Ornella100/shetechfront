@@ -1,35 +1,25 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTriangleExclamation, faCrown } from '@fortawesome/free-solid-svg-icons';
+import { faTriangleExclamation, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { useAbonnementStatut } from '../hooks/useAbonnement';
 
 const GOLD = '#E8A554';
 
-// Bannière affichée dans le layout : essai qui se termine bientôt ou accès expiré.
+// Bannière affichée tant que le pack trois parcours n'a pas été acheté.
 export default function AbonnementBanner() {
   const { data: statut } = useAbonnementStatut();
-  const [now] = useState(() => Date.now());
-  if (!statut || statut.type === 'staff' || statut.type === 'abonnement') return null;
-  const joursRestants = statut.trialEndsAt
-    ? Math.ceil((new Date(statut.trialEndsAt).getTime() - now) / (24 * 60 * 60 * 1000))
-    : 0;
-
-  const expire = !statut.acces;
-  if (!expire && joursRestants > 7) return null;
+  if (!statut || statut.acces) return null;
 
   return (
     <div style={{
-      background: expire ? '#fef2f2' : '#fffbeb',
-      borderBottom: `1px solid ${expire ? '#fecaca' : GOLD}`,
+      background: '#fffbeb',
+      borderBottom: `1px solid ${GOLD}`,
       padding: '10px 20px',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap',
     }}>
-      <FontAwesomeIcon icon={faTriangleExclamation} style={{ color: expire ? '#dc2626' : GOLD }} />
-      <span style={{ fontSize: '13px', color: expire ? '#7f1d1d' : '#78350f', fontWeight: 600 }}>
-        {expire
-          ? 'Votre période d\'essai gratuite est terminée. Abonnez-vous pour continuer à suivre les formations.'
-          : `Votre essai gratuit se termine dans ${joursRestants} jour${joursRestants > 1 ? 's' : ''}.`}
+      <FontAwesomeIcon icon={faTriangleExclamation} style={{ color: GOLD }} />
+      <span style={{ fontSize: '13px', color: '#78350f', fontWeight: 600 }}>
+        Paie une fois 150 000 FCFA pour choisir jusqu’à trois parcours et commencer les cours.
       </span>
       <Link
         to="/dashboard/abonnement"
@@ -38,8 +28,8 @@ export default function AbonnementBanner() {
           padding: '7px 16px', fontSize: '12.5px', fontWeight: 800,
         }}
       >
-        <FontAwesomeIcon icon={faCrown} style={{ marginRight: '6px' }} />
-        S'abonner
+        <FontAwesomeIcon icon={faCreditCard} style={{ marginRight: '6px' }} />
+        Acheter le pack
       </Link>
     </div>
   );
