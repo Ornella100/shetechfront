@@ -55,7 +55,10 @@ export function useInscriptionParcours() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (parcoursId) => api.post(`/parcours/${parcoursId}/inscription`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mes-inscriptions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mes-inscriptions"] });
+      qc.invalidateQueries({ queryKey: ["mentorat", "mes-demandes"] });
+    },
   });
 }
 

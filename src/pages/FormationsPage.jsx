@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleCheck, faPlus, faRoute, faAward, faListCheck } from '@fortawesome/free-solid-svg-icons';
+import { useQuery } from '@tanstack/react-query';
+import api from '../lib/api';
 import {
   useParcoursList, useParcoursDetail,
   useMesInscriptions, useInscriptionParcours, useDesinscriptionParcours,
@@ -18,6 +20,10 @@ export default function FormationsPage() {
   const onboarding = searchParams.get('onboarding') === '1';
   const { data: parcours, isLoading, isError: parcoursError } = useParcoursList();
   const { data: access } = useAbonnementStatut();
+  const { data: demandesMentorat = [] } = useQuery({
+    queryKey: ['mentorat', 'mes-demandes'],
+    queryFn: () => api.get('/mentorat/mes-demandes').then((response) => response.data),
+  });
   const { data: inscriptions, isLoading: inscriptionsLoading, isError: inscriptionsError } = useMesInscriptions();
   const { mutate: inscrire, isPending: inscriptionEnCours, error: erreurInscription, reset: resetInscription } = useInscriptionParcours();
   const { mutate: desinscrire } = useDesinscriptionParcours();
@@ -192,6 +198,7 @@ export default function FormationsPage() {
         <ParcoursModal
           parcoursId={selectedParcoursId}
           isInscrit={inscrits.has(selectedParcoursId)}
+          suiviDemande={demandesMentorat.some((demande) => demande.parcours?.id === selectedParcoursId)}
           acces={Boolean(access?.acces)}
           limiteAtteinte={limiteAtteinte}
           inscriptionEtatInconnu={inscriptionEtatInconnu}
@@ -206,7 +213,7 @@ export default function FormationsPage() {
   );
 }
 
-function ParcoursModal({ parcoursId, isInscrit, acces, limiteAtteinte, inscriptionEtatInconnu, inscriptionsError, max, inscriptionEnCours, onInscrire, onClose }) {
+function ParcoursModal({ parcoursId, isInscrit, suiviDemande, acces, limiteAtteinte, inscriptionEtatInconnu, inscriptionsError, max, inscriptionEnCours, onInscrire, onClose }) {
   const navigate = useNavigate();
   const { data: parcours, isLoading, isError } = useParcoursDetail(parcoursId);
   const contientLecons = parcours?.formations?.some(formation =>
@@ -292,6 +299,12 @@ function ParcoursModal({ parcoursId, isInscrit, acces, limiteAtteinte, inscripti
                 </p>
               )}
 
+              {isInscrit && suiviDemande && (
+                <p role="status" style={{ background: '#effaf3', border: '1px solid #b7e4c7', color: '#17633a', padding: '12px 14px', borderRadius: 9, fontSize: 13, lineHeight: 1.5 }}>
+                  Votre demande de suivi pour ce parcours a été transmise à l’équipe SheTech. Une mentor vous sera attribuée.
+                </p>
+              )}
+
               {(!isInscrit || !acces) && parcours?.formations?.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', background: '#fdf7f9', border: '1px solid #f0dce4', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px' }}>
                   <span style={{ color: inscriptionsError ? '#991b1b' : '#6b7280', fontSize: '13px' }}>
@@ -300,7 +313,7 @@ function ParcoursModal({ parcoursId, isInscrit, acces, limiteAtteinte, inscripti
                       : !acces
                         ? 'Le pack doit être payé avant de choisir ce parcours.'
                       : contientLecons
-                        ? 'Inscrivez-vous à ce parcours pour démarrer une formation.'
+                        ? 'En choisissant ce parcours, votre demande de suivi par une mentor sera transmise automatiquement.'
                         : 'Les formations de ce parcours attendent encore leurs premières leçons.'}
                   </span>
                   <button
@@ -308,7 +321,7 @@ function ParcoursModal({ parcoursId, isInscrit, acces, limiteAtteinte, inscripti
                     disabled={acces && (!contientLecons || limiteAtteinte || inscriptionEtatInconnu || inscriptionEnCours)}
                     style={{ background: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu) ? ACCENT : '#f3f4f6', color: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu) ? '#fff' : '#9ca3af', border: 'none', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', fontWeight: 800, cursor: !acces || (contientLecons && !limiteAtteinte && !inscriptionEtatInconnu && !inscriptionEnCours) ? 'pointer' : 'not-allowed' }}
                   >
-                    {!acces ? 'Payer pour choisir ce parcours' : inscriptionEnCours ? 'Inscription...' : inscriptionEtatInconnu ? 'Vérification...' : limiteAtteinte ? `Limite de ${max} parcours atteinte` : contientLecons ? 'Choisir ce parcours' : 'En préparation'}
+                    {!acces ? 'Payer pour choisir ce parcours' : inscriptionEnCours ? 'Inscription...' : inscriptionEtatInconnu ? 'Vérification...' : limiteAtteinte ? `Limite de ${max} parcours atteinte` : contientLecons ? 'Choisir et demander un suivi' : 'En préparation'}
                   </button>
                 </div>
               )}
