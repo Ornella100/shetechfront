@@ -82,7 +82,7 @@ export default function FormationsPage() {
               🎉 Bienvenue sur SheTech !
             </p>
             <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
-              Le paiement unique de <strong>150 000 FCFA</strong> est nécessaire avant de choisir jusqu'à <strong>{max} parcours</strong> et de commencer les formations.
+              Le paiement est nécessaire avant de choisir jusqu'à <strong>{max} parcours</strong> et de commencer les formations.
             </p>
           </div>
         )}

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../store/authStore";
-import AbonnementBanner from "../components/AbonnementBanner";
 import MessagerieWidget from "../components/MessagerieWidget";
 
 const BASE_MENU = [
@@ -76,7 +75,6 @@ export default function DashboardLayout() {
       </aside>
 
       <main className="dash-main">
-        <AbonnementBanner />
         <Outlet />
       </main>
 
