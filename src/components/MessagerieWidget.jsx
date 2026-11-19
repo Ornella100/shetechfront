@@ -227,7 +227,7 @@ function PanelListe({ conversations, projets, loading, onOpenChat, onRefresh }) 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{c.nom}</div>
                 <div style={{ fontSize: 11, color: GRAY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {c.dernier_message || "Nouvelle discussion"}
+                  {c.dernier_message || c.message_accueil || "Nouvelle discussion"}
                 </div>
               </div>
               {c.nb_non_lus > 0 && (
